@@ -1,0 +1,43 @@
+{ "frames": {
+   "room0 (z:0).aseprite": {
+    "frame": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "sourceSize": { "w": 640, "h": 320 },
+    "duration": 100
+   },
+   "room0 (z:238).aseprite": {
+    "frame": { "x": 0, "y": 320, "w": 640, "h": 320 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "sourceSize": { "w": 640, "h": 320 },
+    "duration": 100
+   },
+   "room0 (z:227).aseprite": {
+    "frame": { "x": 0, "y": 640, "w": 640, "h": 320 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "sourceSize": { "w": 640, "h": 320 },
+    "duration": 100
+   },
+   "room0 (map).aseprite": {
+    "frame": { "x": 0, "y": 960, "w": 640, "h": 320 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "sourceSize": { "w": 640, "h": 320 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "http://www.aseprite.org/",
+  "version": "1.2.21-x64",
+  "image": "room0.png",
+  "format": "RGBA8888",
+  "size": { "w": 640, "h": 1280 },
+  "scale": "1"
+ }
+}

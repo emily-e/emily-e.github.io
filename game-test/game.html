@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Adventure Game Graphical Room Test</title>
+	<script src="pixi.min.js"></script>
+</head>
+<body>
+	<script type="text/javascript">
+/*
+	https://www.pixijs.com/
+		2d library for adventure game
+		http://www.yeahbutisitflash.com/?p=5226&cpage=1
+		https://medium.com/dailyjs/how-to-build-a-simple-sprite-animation-in-javascript-b764644244aa
+
+		https://www.codeandweb.com/texturepacker/tutorials/how-to-create-sprite-sheets-and-animations-with-pixijs5
+
+	https://www.redblobgames.com/pathfinding/a-star/introduction.html
+	https://briangrinstead.com/blog/astar-search-algorithm-in-javascript/
+
+	https://www.pixijs.com/tutorials
+	http://pixijs.download/release/docs/index.html
+	https://stackoverflow.com/questions/667045/getpixel-from-html-canvas
+
+https://www.aseprite.org/docs/cli/#platform-specific-details
+https://community.aseprite.org/t/is-there-a-way-to-export-layers-into-the-same-spritesheet-on-top-of-eachother/230
+`aseprite -b bg-test.aseprite --save-as map-{layer}.png`
+
+Export a room:
+`aseprite -b --split-layers --all-layers room0.aseprite --sheet room0.png --data room0.json`
+
+https://ihatetomatoes.net/how-to-work-with-images-and-pixi-js/
+
+*/
+// The application will create a renderer using WebGL, if possible,
+// with a fallback to a canvas render. It will also setup the ticker
+// and the root stage PIXI.Container
+const app = new PIXI.Application();
+
+// The application will create a canvas element for you that you
+// can then insert into the DOM
+document.body.appendChild(app.view);
+
+//PIXI.Sprite.fromImage();
+// load the texture we need
+app.loader
+	.add("spritesheet.json")
+	.add("room0.json")
+//	.add('room_z0', 'room_0-z_0.png')
+//	.add('room_z15', 'room_0-z_15.png')
+	.load(
+		(loader, resources) => {
+			const room = new PIXI.Container();
+			room.sortableChildren = true;
+			app.stage.addChild(room);
+			
+			const roomSheet = resources["room0.json"].spritesheet;
+			console.log(roomSheet);
+			Object.keys(roomSheet.textures)
+				.forEach(name => {
+					const info = {};
+					name.substring(name.indexOf('(') + 1, name.lastIndexOf(')'))
+						.split(',')
+						.forEach(kv => {
+							const pair = kv.split(':');
+							info[pair[0]] = pair[1];
+						});
+					console.log(info);
+					if('z' in info) {
+						const layer = new PIXI.Sprite(roomSheet.textures[name]);
+						layer.zIndex = info.z;
+						room.addChild(layer);
+					}
+				});
+
+			room.interactive = true;
+		/*
+room
+        // set the mousedown and touchstart callback...
+        .on('mousedown', onButtonDown)
+        .on('touchstart', onButtonDown)
+
+        // set the mouseup and touchend callback...
+        .on('mouseup', onButtonUp)
+        .on('touchend', onButtonUp)
+        .on('mouseupoutside', onButtonUp)
+        .on('touchendoutside', onButtonUp)
+
+        // set the mouseover callback...
+        .on('mouseover', onButtonOver)
+
+        // set the mouseout callback...
+        .on('mouseout', onButtonOut)
+
+
+        // you can also listen to click and tap events :
+        //.on('click', noop)
+*/
+			//    bunny.x = app.renderer.width / 2;
+			//    bunny.y = app.renderer.height / 2;
+			// Rotate around the center
+			//    bunny.anchor.x = 0.5;
+			//    bunny.anchor.y = 0.5;
+
+			//    app.stage.addChild(bunny);
+
+			const sheet = resources["spritesheet.json"].spritesheet;
+			//const textures = new PIXI.Sprite(sheet.textures["sprite-test.png"]);
+
+			const anim = new PIXI.AnimatedSprite(sheet.animations['test']);
+			anim.updateAnchor = true;  
+
+			anim.x = 0;
+			anim.y = 160;
+			anim.zIndex = 160;
+
+			function mvLeft() { anim.x -= 5; }
+			function mvRight() { anim.x += 5; }
+			function mvUp() {
+				anim.y -= 5;
+				anim.zIndex = anim.y;
+			}
+			function mvDown() {
+				anim.y += 5;
+				anim.zIndex = anim.y;
+			}
+
+			document.querySelector('body').addEventListener('keydown', function (evt) {
+				// escape
+				//if(evt.keyCode == 27) { eventHandler.mode(); }
+				// left
+				if(evt.keyCode == 37) { mvLeft(); }
+				// up
+				if(evt.keyCode == 38) { mvUp(); }
+				// right
+				if(evt.keyCode == 39) { mvRight(); }
+				// down
+				if(evt.keyCode == 40) { mvDown(); }
+			});
+
+			anim.animationSpeed = 0.167; 
+			anim.play();
+			room.addChild(anim);
+
+			console.log(room);
+//			let ctr = 0;
+			// Listen for frame updates
+			app.ticker.add(() => {
+/*				ctr += 1;
+				if (ctr > 10) {
+					room.removeChild(anim);
+				}
+				if (ctr > 30) {
+					app.stage.removeChild(room);
+				}*/
+			// each frame we spin the bunny around a bit
+			//      bunny.rotation += 0.01;
+			});
+		}
+	);
+
+/*
+Pathfinding:
+	Avatar
+		Bound box
+		Movement center
+	Map
+		2D grid with bounds
+		Sprites with bounds
+	Goal (x,y)
+*/
+
+</script>
+</body>
+</html>
