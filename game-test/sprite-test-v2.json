@@ -1,0 +1,93 @@
+{ "frames": {
+   "sprite-test-v2 (tag:walk,frame:0)": {
+    "frame": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "sprite-test-v2 (tag:walk,frame:1)": {
+    "frame": { "x": 233, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "sprite-test-v2 (tag:walk,frame:2)": {
+    "frame": { "x": 466, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "sprite-test-v2 (tag:walk,frame:3)": {
+    "frame": { "x": 699, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "sprite-test-v2 (tag:walk,frame:4)": {
+    "frame": { "x": 932, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "sprite-test-v2 (tag:walk,frame:5)": {
+    "frame": { "x": 1165, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "sprite-test-v2 (tag:map,frame:6)": {
+    "frame": { "x": 1398, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "sprite-test-v2 (tag:stand,frame:7)": {
+    "frame": { "x": 1631, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "http://www.aseprite.org/",
+  "version": "1.2.21-x64",
+  "image": "sprite-test-v2.png",
+  "format": "RGBA8888",
+  "size": { "w": 1864, "h": 233 },
+  "scale": "1",
+  "frameTags": [
+   { "name": "walk", "from": 0, "to": 5, "direction": "forward" },
+   { "name": "map", "from": 6, "to": 6, "direction": "forward" },
+   { "name": "stand", "from": 7, "to": 7, "direction": "forward" }
+  ],
+  "layers": [
+   { "name": "Sprite Sheet", "opacity": 255, "blendMode": "normal" }
+  ],
+  "slices": [
+  ]
+ }
+}

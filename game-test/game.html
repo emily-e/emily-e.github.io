@@ -22,6 +22,10 @@
 	http://pixijs.download/release/docs/index.html
 	https://stackoverflow.com/questions/667045/getpixel-from-html-canvas
 
+	https://pixijs.io/examples/?v=v5.2.1#/masks/filter.js
+		https://www.html5gamedevs.com/topic/43900-masking-an-image-with-multiple-blurred-circles/
+	https://stackoverflow.com/questions/40722796/is-it-possible-to-create-a-pixi-texture-from-multiple-image-sources-in-pixi-js
+
 https://www.aseprite.org/docs/cli/#platform-specific-details
 https://community.aseprite.org/t/is-there-a-way-to-export-layers-into-the-same-spritesheet-on-top-of-eachother/230
 `aseprite -b bg-test.aseprite --save-as map-{layer}.png`
@@ -45,6 +49,7 @@ document.body.appendChild(app.view);
 // load the texture we need
 app.loader
 	.add("spritesheet.json")
+	.add("sprite-test-v2.json")
 	.add("room0.json")
 //	.add('room_z0', 'room_0-z_0.png')
 //	.add('room_z15', 'room_0-z_15.png')
@@ -70,6 +75,23 @@ app.loader
 						const layer = new PIXI.Sprite(roomSheet.textures[name]);
 						layer.zIndex = info.z;
 						room.addChild(layer);
+					}
+					// https://www.html5gamedevs.com/topic/18018-how-to-read-pixel-color/
+					// https://pixijs.io/examples/?v=v5.0.0-rc.2#/textures/gradient-resource.js
+					if('map' in info) {
+						const map = new PIXI.Sprite(roomSheet.textures[name]);
+						console.log('Map: width - ' + map.width + ' height - ' + map.height);
+						const canvas = document.createElement('canvas');
+						canvas.width = map.width;
+						canvas.height = map.height;
+						const ctx = canvas.getContext('2d');
+						ctx.drawImage(map.texture.baseTexture.resource.source,
+							map.texture.orig.x, map.texture.orig.y,
+							map.texture.orig.width, map.texture.orig.height,
+							0,0,
+							map.width, map.height);
+						const pixels = ctx.getImageData(0, 0, map.width, map.height).data
+						console.log(pixels);
 					}
 				});
 
@@ -104,25 +126,82 @@ room
 
 			//    app.stage.addChild(bunny);
 
+			const sheet2 = resources["sprite-test-v2.json"].spritesheet;
+			console.log(sheet2);
+			const animations = {};
+			Object.keys(sheet2.textures)
+				.forEach(name => {
+					const info = {};
+					name.substring(name.indexOf('(') + 1, name.lastIndexOf(')'))
+						.split(',')
+						.forEach(kv => {
+							const pair = kv.split(':');
+							info[pair[0]] = pair[1];
+						});
+					if('tag' in info) {
+						if (!(info.tag in animations)) {
+							animations[info.tag] = [];
+						}
+						const frames = animations[info.tag];
+						frames.push(sheet2.textures[name]);
+					}
+					console.log(info);
+				});
+			console.log(animations);
+			const anims = {};
+			Object.keys(animations)
+				.forEach(name => {
+					console.log(animations[name]);
+					anims[name] = new PIXI.AnimatedSprite(animations[name]);
+				});
+			console.log(anims);
+
 			const sheet = resources["spritesheet.json"].spritesheet;
 			//const textures = new PIXI.Sprite(sheet.textures["sprite-test.png"]);
 
-			const anim = new PIXI.AnimatedSprite(sheet.animations['test']);
-			anim.updateAnchor = true;  
+			//const anim = new PIXI.AnimatedSprite(sheet.animations['test']);
+			let anim = anims.stand;
+			//anim.updateAnchor = true;  
 
 			anim.x = 0;
 			anim.y = 160;
 			anim.zIndex = 160;
 
-			function mvLeft() { anim.x -= 5; }
-			function mvRight() { anim.x += 5; }
+			const player = {
+				x: 0, y: 160,
+				dx: 0, dy: 0
+			}
+			function mvLeft() {
+				console.log('left');
+				if (player.dx < 0) {
+					player.dx = 0;
+				} else {
+					player.dx = -2;
+				}
+			}
+			function mvRight() {
+				console.log('right');
+				if (player.dx > 0) {
+					player.dx = 0;
+				} else {
+					player.dx = 2;
+				}
+			}
 			function mvUp() {
-				anim.y -= 5;
-				anim.zIndex = anim.y;
+				console.log('up');
+				if (player.dy < 0) {
+					player.dy = 0;
+				} else {
+					player.dy = -2;
+				}
 			}
 			function mvDown() {
-				anim.y += 5;
-				anim.zIndex = anim.y;
+				console.log('down');
+				if (player.dy > 0) {
+					player.dy = 0;
+				} else {
+					player.dy = 2;
+				}
 			}
 
 			document.querySelector('body').addEventListener('keydown', function (evt) {
@@ -146,6 +225,25 @@ room
 //			let ctr = 0;
 			// Listen for frame updates
 			app.ticker.add(() => {
+				let newAnim = anim;
+				if((player.dx == 0) && (player.dy == 0)) {
+					newAnim = anims.stand;
+				} else {
+					newAnim = anims.walk;
+				}
+				if(newAnim != anim) {
+					room.removeChild(anim);
+					anim = newAnim;
+					anim.animationSpeed = 0.167; 
+					anim.play();
+					room.addChild(anim);
+				}
+				player.x += player.dx;
+				player.y += player.dy;
+				anim.x = player.x;
+				anim.y = player.y;
+				anim.zIndex = player.y;
+				
 /*				ctr += 1;
 				if (ctr > 10) {
 					room.removeChild(anim);
