@@ -58,9 +58,13 @@ app.loader
 			const room = new PIXI.Container();
 			room.sortableChildren = true;
 			app.stage.addChild(room);
-			
+
 			const roomSheet = resources["room0.json"].spritesheet;
 			console.log(roomSheet);
+			const roomMap = {
+				pixels: [], width: 0, height: 0
+			};
+
 			Object.keys(roomSheet.textures)
 				.forEach(name => {
 					const info = {};
@@ -90,8 +94,10 @@ app.loader
 							map.texture.orig.width, map.texture.orig.height,
 							0,0,
 							map.width, map.height);
-						const pixels = ctx.getImageData(0, 0, map.width, map.height).data
-						console.log(pixels);
+						roomMap.pixels = ctx.getImageData(0, 0, map.width, map.height).data
+						roomMap.width = map.width;
+						roomMap.height = map.height;
+						//console.log(roomMap.pixels);
 					}
 				});
 
@@ -126,6 +132,15 @@ room
 
 			//    app.stage.addChild(bunny);
 
+			const playerCanvas = document.createElement('canvas');
+			const playerCtx = playerCanvas.getContext('2d');
+			const player = {
+				x: 110, y: 318,
+				dx: 0, dy: 0,
+				pixels: {},
+				anchor: { x: 0, y: 0, width: 0, height: 0 }
+			}
+
 			const sheet2 = resources["sprite-test-v2.json"].spritesheet;
 			console.log(sheet2);
 			const animations = {};
@@ -139,11 +154,31 @@ room
 							info[pair[0]] = pair[1];
 						});
 					if('tag' in info) {
-						if (!(info.tag in animations)) {
-							animations[info.tag] = [];
-						}
-						const frames = animations[info.tag];
-						frames.push(sheet2.textures[name]);
+						if(info.tag == 'map') {
+							const map = new PIXI.Sprite(sheet2.textures[name]);
+							console.log('Char Map: width - ' + map.width + ' height - ' + map.height);
+							playerCanvas.width = map.width;
+							playerCanvas.height = map.height;
+							console.log('txt ' + map.texture.orig.x + ' ' + map.texture.orig.y);
+							playerCtx.drawImage(map.texture.baseTexture.resource.source,
+								map.texture.orig.x, map.texture.orig.y,
+								map.texture.orig.width, map.texture.orig.height,
+								0,0,
+								map.width, map.height);
+							player.pixels = playerCtx.getImageData(0, 0, map.width, map.height).data;
+							console.log(player.pixels);
+							console.log(map.anchor);
+							player.anchor.x = map.anchor.x;
+							player.anchor.y = map.anchor.y;
+							player.anchor.width = map.width;
+							player.anchor.height = map.height;
+						}// else {
+							if (!(info.tag in animations)) {
+								animations[info.tag] = [];
+							}
+							const frames = animations[info.tag];
+							frames.push(sheet2.textures[name]);
+						//}
 					}
 					console.log(info);
 				});
@@ -163,16 +198,13 @@ room
 			let anim = anims.stand;
 			//anim.updateAnchor = true;  
 
-			anim.x = 0;
-			anim.y = 160;
-			anim.zIndex = 160;
+			anim.x = player.x;
+			anim.y = player.y;
+			anim.zIndex = player.y;
 
-			const player = {
-				x: 0, y: 160,
-				dx: 0, dy: 0
-			}
 			function mvLeft() {
 				console.log('left');
+				player.dy = 0;
 				if (player.dx < 0) {
 					player.dx = 0;
 				} else {
@@ -181,6 +213,7 @@ room
 			}
 			function mvRight() {
 				console.log('right');
+				player.dy = 0;
 				if (player.dx > 0) {
 					player.dx = 0;
 				} else {
@@ -189,6 +222,7 @@ room
 			}
 			function mvUp() {
 				console.log('up');
+				player.dx = 0;
 				if (player.dy < 0) {
 					player.dy = 0;
 				} else {
@@ -197,6 +231,7 @@ room
 			}
 			function mvDown() {
 				console.log('down');
+				player.dx = 0;
 				if (player.dy > 0) {
 					player.dy = 0;
 				} else {
@@ -222,7 +257,15 @@ room
 			room.addChild(anim);
 
 			console.log(room);
-//			let ctr = 0;
+
+			console.log(roomMap.pixels);
+
+			const mapAnim = anims.map;
+			room.addChild(mapAnim);
+			mapAnim.x = player.x;
+			mapAnim.y = player.y;
+			mapAnim.zIndex = player.y + 1;
+
 			// Listen for frame updates
 			app.ticker.add(() => {
 				let newAnim = anim;
@@ -238,21 +281,45 @@ room
 					anim.play();
 					room.addChild(anim);
 				}
+
+				let flag = false;
+				for(let x = 0; x < player.anchor.width; x++) {
+					if(flag) { break; }
+					const roomX = (player.x + player.dx + x) - Math.floor(player.anchor.width * player.anchor.x);
+					for(let y = 0; y < player.anchor.height; y++) {
+						const roomY = (player.y + player.dy + y) - Math.floor(player.anchor.height * player.anchor.y);
+						const playerOffset = (x + (y * player.anchor.width)) * 4;
+						const roomOffset = (roomX + (roomY * roomMap.width)) * 4;
+						// out of bounds on room
+						if((roomOffset < 0) || (roomOffset > (roomMap.pixels.length - 4))) { continue; }
+						// player map is transparent
+						if(player.pixels[playerOffset + 3] == 0) { continue; }
+						//console.log('poffs ' + playerOffset + ' xy ' + x + ', ' + y + 'alpha ' + player.pixels[playerOffset + 3] + 'r ' + player.pixels[playerOffset]);
+						// room map is transparent
+						if(roomMap.pixels[roomOffset + 3] == 0) { continue; }
+						const r = roomMap.pixels[roomOffset];
+						const g = roomMap.pixels[roomOffset + 1];
+						const b = roomMap.pixels[roomOffset + 2];
+						if((r == 0) && (g == 0) && (b == 0)) {
+							//console.log('stop: xy ' + x + ', ' + y + ', playerxy = ' + player.x + ', ' + player.y + ', roomxy ' + roomX + ', ' + roomY);
+							player.dx = 0;
+							player.dy = 0;
+							flag = true;
+							break;
+						}
+						//if(x==0 && y==0) { console.log( "px,y: " + x + ", " + y + ", roomx,y: " + roomX + ", " + roomY); }
+					}
+				}
+				//if(flag) { console.log('stop'); }
 				player.x += player.dx;
 				player.y += player.dy;
+				if((player.dx != 0) || (player.dy != 0))console.log('px,y ' + player.x + ', ' + player.y);
 				anim.x = player.x;
 				anim.y = player.y;
 				anim.zIndex = player.y;
-				
-/*				ctr += 1;
-				if (ctr > 10) {
-					room.removeChild(anim);
-				}
-				if (ctr > 30) {
-					app.stage.removeChild(room);
-				}*/
-			// each frame we spin the bunny around a bit
-			//      bunny.rotation += 0.01;
+				mapAnim.x = anim.x;
+				mapAnim.y = anim.y;
+				mapAnim.zIndex = anim.y + 1;
 			});
 		}
 	);
