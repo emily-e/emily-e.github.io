@@ -7,6 +7,7 @@
 </head>
 <body>
 	<script type="text/javascript">
+'use strict';
 /*
 	https://www.pixijs.com/
 		2d library for adventure game
@@ -32,297 +33,416 @@ https://community.aseprite.org/t/is-there-a-way-to-export-layers-into-the-same-s
 
 Export a room:
 `aseprite -b --split-layers --all-layers room0.aseprite --sheet room0.png --data room0.json`
+aseprite -b --split-layers --all-layers --filename-format "{title} (tag:{tag},frame:{frame},{layer})" room0.aseprite --sheet room0.png --data room0.json
+
+{title} (tag:{tag},{layer},frame:{frame})
 
 https://ihatetomatoes.net/how-to-work-with-images-and-pixi-js/
 
 */
+
+// http://scottmcdonnell.github.io/pixi-examples/index.html?s=demos&f=interactivity.js&title=Interactivity
+function inputHandlers(player, room) {
+	function mvLeft() {
+		console.log('left');
+		player.dx = (player.dx < 0) ? 0 : -2;
+		player.dy = 0;
+	}
+	function mvRight() {
+		console.log('right');
+		player.dx = (player.dx > 0) ? 0 : 2;
+		player.dy = 0;
+	}
+	function mvUp() {
+		console.log('up');
+		player.dx = 0;
+		player.dy = (player.dy < 0) ? 0 : -2;
+	}
+	function mvDown() {
+		console.log('down');
+		player.dx = 0;
+		player.dy = (player.dy > 0) ? 0 : 2;
+	}
+
+	document.querySelector('body').addEventListener('keydown', function (evt) {
+		// escape
+		//if(evt.keyCode == 27) { eventHandler.mode(); }
+		// left
+		if(evt.keyCode == 37) { mvLeft(); }
+		// up
+		if(evt.keyCode == 38) { mvUp(); }
+		// right
+		if(evt.keyCode == 39) { mvRight(); }
+		// down
+		if(evt.keyCode == 40) { mvDown(); }
+	});
+
+	function no_op() {}
+
+	room.interactive = true;
+	room
+		// set the mousedown and touchstart callback...
+		.on('mousedown', no_op)
+		.on('touchstart', no_op)
+
+		// set the mouseup and touchend callback...
+		.on('mouseup', no_op)
+		.on('touchend', no_op)
+		.on('mouseupoutside', no_op)
+		.on('touchendoutside', no_op)
+
+		// set the mouseover callback...
+		.on('mouseover', no_op)
+
+		// set the mouseout callback...
+		.on('mouseout', no_op);
+		// you can also listen to click and tap events :
+		//.on('click', noop)
+
+}
+
 // The application will create a renderer using WebGL, if possible,
 // with a fallback to a canvas render. It will also setup the ticker
 // and the root stage PIXI.Container
-const app = new PIXI.Application();
+const app = new PIXI.Application(); //{ resizeTo: window });
 
 // The application will create a canvas element for you that you
 // can then insert into the DOM
 document.body.appendChild(app.view);
 
-//PIXI.Sprite.fromImage();
-// load the texture we need
+const ColorMessages = {
+	'000000': function(p) {
+		return p.stop(this);
+	},
+	'5fcde4': function(p) {
+		return p.wade(this);
+	},
+	'5b6ee1': function(p) {
+		return p.swim(this);
+	},
+	'ff0001': function(p) {
+		return p.goWest(this);
+	},
+	'ff0011': function(p) {
+		return p.goNorth(this);
+	},
+	'ff0021': function(p) {
+		return p.goEast(this);
+	},
+	'ff0031': function(p) {
+		return p.goSouth(this);
+	}
+}
+/*
+class Room {
+
+}
+*/
+
+function parseFrameName(name) {
+	const info = {};
+	name.substring(name.indexOf('(') + 1, name.lastIndexOf(')'))
+		.split(',')
+		.forEach(kv => {
+			const pair = kv.split(':');
+			info[pair[0]] = pair[1];
+		});
+	return info;
+}
+
+function getPixels(sprite) {
+	const canvas = document.createElement('canvas');
+	console.log('Char Map: width - ' + sprite.width + ' height - ' + sprite.height);
+	canvas.width = sprite.width;
+	canvas.height = sprite.height;
+	console.log('txt ' + sprite.texture.orig.x + ' ' + sprite.texture.orig.y);
+
+	const ctx = canvas.getContext('2d');
+	ctx.drawImage(sprite.texture.baseTexture.resource.source,
+		sprite.texture.orig.x, sprite.texture.orig.y,
+		sprite.texture.orig.width, sprite.texture.orig.height,
+		0,0,
+		sprite.width, sprite.height);
+
+	return ctx.getImageData(0, 0, sprite.width, sprite.height).data;
+}
+
+const room = {
+	roomState: 'day',
+	states: {},
+	colorToMessage: ColorMessages,
+
+	setAnimation: function(container) {
+		const state = this.states[this.roomState];
+		console.log(this);
+		Object.keys(state.layers)
+			.forEach(z => {
+				state.layers[z].play();
+				container.addChild(state.layers[z]);
+			});
+	}
+};
+
+function loadRoomFromSheet(room, roomName, spritesheet) {
+	const animations = {};
+	Object.keys(spritesheet.textures)
+		.forEach(name => {
+			if(name.indexOf(roomName + ' (') != 0) { return; }
+			const info = parseFrameName(name);
+			console.log(info);
+			if(!('tag' in info)) { info.tag = 'default'; }
+			if(!(info.tag in room.states)) {
+				room.states[info.tag] = {
+					layers: {},
+					map: {}
+				};
+			}
+			const tag = room.states[info.tag];
+
+			// https://www.html5gamedevs.com/topic/18018-how-to-read-pixel-color/
+			// https://pixijs.io/examples/?v=v5.0.0-rc.2#/textures/gradient-resource.js
+			if('map' in info) {
+				const map = new PIXI.Sprite(spritesheet.textures[name]);
+				tag.map = {
+					pixels: getPixels(map),
+					width: map.width, height: map.height
+				};
+			} else if('z' in info) {
+				if (!(info.tag in animations)) { animations[info.tag] = {}; }
+				const animTag = animations[info.tag];
+				if(!(info.z in animTag)) { animTag[info.z] = []; }
+				animTag[info.z].push(spritesheet.textures[name]);
+			}
+		});
+	console.log(animations);
+	Object.keys(animations)
+		.forEach(tag => {
+			console.log(tag);
+			Object.keys(animations[tag])
+				.forEach(z => {
+					room.states[tag].layers[z] = new PIXI.AnimatedSprite(animations[tag][z]);
+					room.states[tag].layers[z].zIndex = Number.parseInt(z);
+					room.states[tag].layers[z].animationSpeed = 0.167; 
+				});
+		});
+}
+
+const player = {
+	x: 110, y: 318,
+	dx: 0, dy: 0,
+	animState: '',
+	currentMap: 'default',
+	animations: {},
+	maps: {},
+	stop: function (sender) {
+		console.log(this);
+		this.dx = 0;
+		this.dy = 0;
+		return true;
+	},
+	wade: function (sender) {
+		return false;
+	},
+	swim: function (sender) {
+		return false;
+	},
+	goWest: function (sender) {
+		console.log('west!');
+		this.dx = 0;
+		this.dy = 0;
+		return true;
+	},
+	goNorth: function (sender) {
+		console.log('north!');
+		this.dx = 0;
+		this.dy = 0;
+		return true;
+	},
+	goEast: function (sender) {
+		console.log('east!');
+		this.dx = 0;
+		this.dy = 0;
+		return true;
+	},
+	goSouth: function (sender) {
+		console.log('south!');
+		this.dx = 0;
+		this.dy = 0;
+		return true;
+	},
+
+	setAnimation: function(container) {
+		let newAnim = this.animState;
+		if((this.dx == 0) && (this.dy == 0)) {
+			newAnim = 'stand';
+		} else {
+			newAnim = 'walk';
+		}
+		if(newAnim != this.animState) {
+			container.removeChild(this.animations[this.animState]);
+			this.animState = newAnim;
+			this.animations[this.animState].play();
+			container.addChild(this.animations[this.animState]);
+		}
+	},
+
+	updateAnimation: function() {
+		this.animations[this.animState].x = this.x;
+		this.animations[this.animState].y = this.y;
+		this.animations[this.animState].zIndex = this.y;
+	}
+};
+
+function loadSpriteFromSheet(obj, spriteName, spritesheet) {
+	const animations = {};
+	Object.keys(spritesheet.textures)
+		.forEach(name => {
+			if(name.indexOf(spriteName + ' (') != 0) { return; }
+			const info = parseFrameName(name);
+			if('tag' in info) {
+				if(info.tag == 'map') {
+					const map = new PIXI.Sprite(spritesheet.textures[name]);
+					const mapName = ('map' in info) ? info.map : 'default';
+					obj.maps[mapName] = {
+						pixels: getPixels(map),
+						x: map.anchor.x, y: map.anchor.y,
+						width: map.width, height: map.height
+					};
+					console.log(obj.maps[mapName].pixels);
+					console.log(map.anchor);
+				} else {
+					if (!(info.tag in animations)) {
+						animations[info.tag] = [];
+					}
+					animations[info.tag].push(spritesheet.textures[name]);
+				}
+			}
+			console.log(info);
+		});
+	console.log(animations);
+	Object.keys(animations)
+		.forEach(name => {
+			console.log(animations[name]);
+			obj.animations[name] = new PIXI.AnimatedSprite(animations[name]);
+			obj.animations[name].animationSpeed = 0.167; 
+		});
+	console.log(obj.animations);
+}
+
+function moveAndCollide(obj, room) {
+	const roomMap = room.states[room.roomState].map;
+
+	const objMap = obj.maps[obj.currentMap];
+
+	let flag = false;
+	for(let x = 0; x < objMap.width; x++) {
+		if(flag) { break; }
+		const roomX = (obj.x + obj.dx + x) - Math.floor(objMap.width * objMap.x);
+
+		for(let y = 0; y < objMap.height; y++) {
+			const roomY = (obj.y + obj.dy + y) - Math.floor(objMap.height * objMap.y);
+			const objOffset = (x + (y * objMap.width)) * 4;
+			const roomOffset = (roomX + (roomY * roomMap.width)) * 4;
+
+			// out of bounds on room
+			if((roomOffset < 0) || (roomOffset > (roomMap.pixels.length - 4))) { continue; }
+			// player map is transparent
+			if(objMap.pixels[objOffset + 3] == 0) { continue; }
+			//console.log('poffs ' + playerOffset + ' xy ' + x + ', ' + y + 'alpha ' + player.pixels[playerOffset + 3] + 'r ' + player.pixels[playerOffset]);
+			// room map is transparent
+			if(roomMap.pixels[roomOffset + 3] == 0) { continue; }
+
+			const rgb = ((roomMap.pixels[roomOffset] < 16) ? '0' : '') + roomMap.pixels[roomOffset].toString(16)
+				+ ((roomMap.pixels[roomOffset + 1] < 16) ? '0' : '') + roomMap.pixels[roomOffset + 1].toString(16)
+				+ ((roomMap.pixels[roomOffset + 2] < 16) ? '0' : '') + roomMap.pixels[roomOffset + 2].toString(16);
+			if(rgb in room.colorToMessage) {
+				flag = room.colorToMessage[rgb](obj);
+			}
+			if(flag) { break; }
+		}
+	}
+	obj.x += obj.dx;
+	obj.y += obj.dy;
+	if((obj.dx != 0) || (obj.dy != 0)) { console.log('px,y ' + obj.x + ', ' + obj.y); }
+
+	obj.updateAnimation();
+}
+
+//https://medium.com/@michelfariarj/scale-a-pixi-js-game-to-fit-the-screen-1a32f8730e9c
+// Consider that WIDTH and HEIGHT are defined as the width and height of your unresized game in pixels.
+function resize (app) {
+	return function () {
+		const roomMap = room.states[room.roomState].map;
+		const WIDTH = roomMap.width;
+		const HEIGHT = roomMap.height;
+
+		const vpw = window.innerWidth -2;  // Width of the viewport
+		const vph = window.innerHeight - 2; // Height of the viewport
+		let nvw; // New game width
+		let nvh; // New game height
+
+		// The aspect ratio is the ratio of the screen's sizes in different dimensions.
+		// The height-to-width aspect ratio of the game is HEIGHT / WIDTH.
+		
+		if (vph / vpw < HEIGHT / WIDTH) {
+			// If height-to-width ratio of the viewport is less than the height-to-width ratio
+			// of the game, then the height will be equal to the height of the viewport, and
+			// the width will be scaled.
+			nvh = vph;
+			nvw = (nvh * WIDTH) / HEIGHT;
+		} else {
+			// In the else case, the opposite is happening.
+			nvw = vpw;
+			nvh = (nvw * HEIGHT) / WIDTH;
+		}
+    
+		// Set the game screen size to the new values.
+		// This command only makes the screen bigger --- it does not scale the contents of the game.
+		// There will be a lot of extra room --- or missing room --- if we don't scale the stage.
+		app.renderer.resize(nvw, nvh);
+    
+		// This command scales the stage to fit the new size of the game.
+		app.stage.scale.set(nvw / WIDTH, nvh / HEIGHT);
+	};
+}
+
+// Perform initial resizing
+// Add event listener so that our resize function runs every time the
+// browser window is resized.
+window.addEventListener("resize", resize(app));
+console.log('here');
+
 app.loader
-	.add("spritesheet.json")
 	.add("sprite-test-v2.json")
 	.add("room0.json")
-//	.add('room_z0', 'room_0-z_0.png')
-//	.add('room_z15', 'room_0-z_15.png')
 	.load(
 		(loader, resources) => {
-			const room = new PIXI.Container();
-			room.sortableChildren = true;
-			app.stage.addChild(room);
+			const screen = new PIXI.Container();
+			screen.sortableChildren = true;
+			app.stage.addChild(screen);
 
 			const roomSheet = resources["room0.json"].spritesheet;
 			console.log(roomSheet);
-			const roomMap = {
-				pixels: [], width: 0, height: 0
-			};
 
-			Object.keys(roomSheet.textures)
-				.forEach(name => {
-					const info = {};
-					name.substring(name.indexOf('(') + 1, name.lastIndexOf(')'))
-						.split(',')
-						.forEach(kv => {
-							const pair = kv.split(':');
-							info[pair[0]] = pair[1];
-						});
-					console.log(info);
-					if('z' in info) {
-						const layer = new PIXI.Sprite(roomSheet.textures[name]);
-						layer.zIndex = info.z;
-						room.addChild(layer);
-					}
-					// https://www.html5gamedevs.com/topic/18018-how-to-read-pixel-color/
-					// https://pixijs.io/examples/?v=v5.0.0-rc.2#/textures/gradient-resource.js
-					if('map' in info) {
-						const map = new PIXI.Sprite(roomSheet.textures[name]);
-						console.log('Map: width - ' + map.width + ' height - ' + map.height);
-						const canvas = document.createElement('canvas');
-						canvas.width = map.width;
-						canvas.height = map.height;
-						const ctx = canvas.getContext('2d');
-						ctx.drawImage(map.texture.baseTexture.resource.source,
-							map.texture.orig.x, map.texture.orig.y,
-							map.texture.orig.width, map.texture.orig.height,
-							0,0,
-							map.width, map.height);
-						roomMap.pixels = ctx.getImageData(0, 0, map.width, map.height).data
-						roomMap.width = map.width;
-						roomMap.height = map.height;
-						//console.log(roomMap.pixels);
-					}
-				});
+			loadRoomFromSheet(room, 'room0', roomSheet);
+			room.setAnimation(screen);
 
-			room.interactive = true;
-		/*
-room
-        // set the mousedown and touchstart callback...
-        .on('mousedown', onButtonDown)
-        .on('touchstart', onButtonDown)
-
-        // set the mouseup and touchend callback...
-        .on('mouseup', onButtonUp)
-        .on('touchend', onButtonUp)
-        .on('mouseupoutside', onButtonUp)
-        .on('touchendoutside', onButtonUp)
-
-        // set the mouseover callback...
-        .on('mouseover', onButtonOver)
-
-        // set the mouseout callback...
-        .on('mouseout', onButtonOut)
-
-
-        // you can also listen to click and tap events :
-        //.on('click', noop)
-*/
-			//    bunny.x = app.renderer.width / 2;
-			//    bunny.y = app.renderer.height / 2;
-			// Rotate around the center
-			//    bunny.anchor.x = 0.5;
-			//    bunny.anchor.y = 0.5;
-
-			//    app.stage.addChild(bunny);
-
-			const playerCanvas = document.createElement('canvas');
-			const playerCtx = playerCanvas.getContext('2d');
-			const player = {
-				x: 110, y: 318,
-				dx: 0, dy: 0,
-				pixels: {},
-				anchor: { x: 0, y: 0, width: 0, height: 0 }
-			}
+			inputHandlers(player, screen);
 
 			const sheet2 = resources["sprite-test-v2.json"].spritesheet;
 			console.log(sheet2);
-			const animations = {};
-			Object.keys(sheet2.textures)
-				.forEach(name => {
-					const info = {};
-					name.substring(name.indexOf('(') + 1, name.lastIndexOf(')'))
-						.split(',')
-						.forEach(kv => {
-							const pair = kv.split(':');
-							info[pair[0]] = pair[1];
-						});
-					if('tag' in info) {
-						if(info.tag == 'map') {
-							const map = new PIXI.Sprite(sheet2.textures[name]);
-							console.log('Char Map: width - ' + map.width + ' height - ' + map.height);
-							playerCanvas.width = map.width;
-							playerCanvas.height = map.height;
-							console.log('txt ' + map.texture.orig.x + ' ' + map.texture.orig.y);
-							playerCtx.drawImage(map.texture.baseTexture.resource.source,
-								map.texture.orig.x, map.texture.orig.y,
-								map.texture.orig.width, map.texture.orig.height,
-								0,0,
-								map.width, map.height);
-							player.pixels = playerCtx.getImageData(0, 0, map.width, map.height).data;
-							console.log(player.pixels);
-							console.log(map.anchor);
-							player.anchor.x = map.anchor.x;
-							player.anchor.y = map.anchor.y;
-							player.anchor.width = map.width;
-							player.anchor.height = map.height;
-						}// else {
-							if (!(info.tag in animations)) {
-								animations[info.tag] = [];
-							}
-							const frames = animations[info.tag];
-							frames.push(sheet2.textures[name]);
-						//}
-					}
-					console.log(info);
-				});
-			console.log(animations);
-			const anims = {};
-			Object.keys(animations)
-				.forEach(name => {
-					console.log(animations[name]);
-					anims[name] = new PIXI.AnimatedSprite(animations[name]);
-				});
-			console.log(anims);
+			loadSpriteFromSheet(player, 'sprite-test-v2', sheet2);
 
-			const sheet = resources["spritesheet.json"].spritesheet;
-			//const textures = new PIXI.Sprite(sheet.textures["sprite-test.png"]);
-
-			//const anim = new PIXI.AnimatedSprite(sheet.animations['test']);
-			let anim = anims.stand;
-			//anim.updateAnchor = true;  
-
-			anim.x = player.x;
-			anim.y = player.y;
-			anim.zIndex = player.y;
-
-			function mvLeft() {
-				console.log('left');
-				player.dy = 0;
-				if (player.dx < 0) {
-					player.dx = 0;
-				} else {
-					player.dx = -2;
-				}
-			}
-			function mvRight() {
-				console.log('right');
-				player.dy = 0;
-				if (player.dx > 0) {
-					player.dx = 0;
-				} else {
-					player.dx = 2;
-				}
-			}
-			function mvUp() {
-				console.log('up');
-				player.dx = 0;
-				if (player.dy < 0) {
-					player.dy = 0;
-				} else {
-					player.dy = -2;
-				}
-			}
-			function mvDown() {
-				console.log('down');
-				player.dx = 0;
-				if (player.dy > 0) {
-					player.dy = 0;
-				} else {
-					player.dy = 2;
-				}
-			}
-
-			document.querySelector('body').addEventListener('keydown', function (evt) {
-				// escape
-				//if(evt.keyCode == 27) { eventHandler.mode(); }
-				// left
-				if(evt.keyCode == 37) { mvLeft(); }
-				// up
-				if(evt.keyCode == 38) { mvUp(); }
-				// right
-				if(evt.keyCode == 39) { mvRight(); }
-				// down
-				if(evt.keyCode == 40) { mvDown(); }
-			});
-
-			anim.animationSpeed = 0.167; 
-			anim.play();
-			room.addChild(anim);
-
-			console.log(room);
-
-			console.log(roomMap.pixels);
-
-			const mapAnim = anims.map;
-			room.addChild(mapAnim);
-			mapAnim.x = player.x;
-			mapAnim.y = player.y;
-			mapAnim.zIndex = player.y + 1;
-
+			resize(app)();
 			// Listen for frame updates
 			app.ticker.add(() => {
-				let newAnim = anim;
-				if((player.dx == 0) && (player.dy == 0)) {
-					newAnim = anims.stand;
-				} else {
-					newAnim = anims.walk;
-				}
-				if(newAnim != anim) {
-					room.removeChild(anim);
-					anim = newAnim;
-					anim.animationSpeed = 0.167; 
-					anim.play();
-					room.addChild(anim);
-				}
-
-				let flag = false;
-				for(let x = 0; x < player.anchor.width; x++) {
-					if(flag) { break; }
-					const roomX = (player.x + player.dx + x) - Math.floor(player.anchor.width * player.anchor.x);
-					for(let y = 0; y < player.anchor.height; y++) {
-						const roomY = (player.y + player.dy + y) - Math.floor(player.anchor.height * player.anchor.y);
-						const playerOffset = (x + (y * player.anchor.width)) * 4;
-						const roomOffset = (roomX + (roomY * roomMap.width)) * 4;
-						// out of bounds on room
-						if((roomOffset < 0) || (roomOffset > (roomMap.pixels.length - 4))) { continue; }
-						// player map is transparent
-						if(player.pixels[playerOffset + 3] == 0) { continue; }
-						//console.log('poffs ' + playerOffset + ' xy ' + x + ', ' + y + 'alpha ' + player.pixels[playerOffset + 3] + 'r ' + player.pixels[playerOffset]);
-						// room map is transparent
-						if(roomMap.pixels[roomOffset + 3] == 0) { continue; }
-						const r = roomMap.pixels[roomOffset];
-						const g = roomMap.pixels[roomOffset + 1];
-						const b = roomMap.pixels[roomOffset + 2];
-						if((r == 0) && (g == 0) && (b == 0)) {
-							//console.log('stop: xy ' + x + ', ' + y + ', playerxy = ' + player.x + ', ' + player.y + ', roomxy ' + roomX + ', ' + roomY);
-							player.dx = 0;
-							player.dy = 0;
-							flag = true;
-							break;
-						}
-						//if(x==0 && y==0) { console.log( "px,y: " + x + ", " + y + ", roomx,y: " + roomX + ", " + roomY); }
-					}
-				}
-				//if(flag) { console.log('stop'); }
-				player.x += player.dx;
-				player.y += player.dy;
-				if((player.dx != 0) || (player.dy != 0))console.log('px,y ' + player.x + ', ' + player.y);
-				anim.x = player.x;
-				anim.y = player.y;
-				anim.zIndex = player.y;
-				mapAnim.x = anim.x;
-				mapAnim.y = anim.y;
-				mapAnim.zIndex = anim.y + 1;
+				player.setAnimation(screen);
+				moveAndCollide(player, room);
 			});
 		}
 	);
+
+
 
 /*
 Pathfinding:

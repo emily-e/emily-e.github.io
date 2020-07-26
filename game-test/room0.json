@@ -1,5 +1,5 @@
 { "frames": {
-   "room0 (z:0).aseprite": {
+   "room0 (tag:day,frame:0,z:0)": {
     "frame": { "x": 0, "y": 0, "w": 640, "h": 320 },
     "rotated": false,
     "trimmed": false,
@@ -7,7 +7,23 @@
     "sourceSize": { "w": 640, "h": 320 },
     "duration": 100
    },
-   "room0 (z:238).aseprite": {
+   "room0 (tag:day,frame:1,z:0)": {
+    "frame": { "x": 640, "y": 0, "w": 640, "h": 320 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "sourceSize": { "w": 640, "h": 320 },
+    "duration": 100
+   },
+   "room0 (tag:night,frame:2,z:0)": {
+    "frame": { "x": 1280, "y": 0, "w": 640, "h": 320 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "sourceSize": { "w": 640, "h": 320 },
+    "duration": 100
+   },
+   "room0 (tag:day,frame:0,z:238)": {
     "frame": { "x": 0, "y": 320, "w": 640, "h": 320 },
     "rotated": false,
     "trimmed": false,
@@ -15,7 +31,23 @@
     "sourceSize": { "w": 640, "h": 320 },
     "duration": 100
    },
-   "room0 (z:227).aseprite": {
+   "room0 (tag:day,frame:1,z:238)": {
+    "frame": { "x": 640, "y": 320, "w": 640, "h": 320 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "sourceSize": { "w": 640, "h": 320 },
+    "duration": 100
+   },
+   "room0 (tag:night,frame:2,z:238)": {
+    "frame": { "x": 1280, "y": 320, "w": 640, "h": 320 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "sourceSize": { "w": 640, "h": 320 },
+    "duration": 100
+   },
+   "room0 (tag:day,frame:0,z:227)": {
     "frame": { "x": 0, "y": 640, "w": 640, "h": 320 },
     "rotated": false,
     "trimmed": false,
@@ -23,8 +55,40 @@
     "sourceSize": { "w": 640, "h": 320 },
     "duration": 100
    },
-   "room0 (map).aseprite": {
+   "room0 (tag:day,frame:1,z:227)": {
+    "frame": { "x": 640, "y": 640, "w": 640, "h": 320 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "sourceSize": { "w": 640, "h": 320 },
+    "duration": 100
+   },
+   "room0 (tag:night,frame:2,z:227)": {
+    "frame": { "x": 1280, "y": 640, "w": 640, "h": 320 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "sourceSize": { "w": 640, "h": 320 },
+    "duration": 100
+   },
+   "room0 (tag:day,frame:0,map)": {
     "frame": { "x": 0, "y": 960, "w": 640, "h": 320 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "sourceSize": { "w": 640, "h": 320 },
+    "duration": 100
+   },
+   "room0 (tag:day,frame:1,map)": {
+    "frame": { "x": 640, "y": 960, "w": 640, "h": 320 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
+    "sourceSize": { "w": 640, "h": 320 },
+    "duration": 100
+   },
+   "room0 (tag:night,frame:2,map)": {
+    "frame": { "x": 1280, "y": 960, "w": 640, "h": 320 },
     "rotated": false,
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 320 },
@@ -37,7 +101,7 @@
   "version": "1.2.21-x64",
   "image": "room0.png",
   "format": "RGBA8888",
-  "size": { "w": 640, "h": 1280 },
+  "size": { "w": 1920, "h": 1280 },
   "scale": "1"
  }
 }
