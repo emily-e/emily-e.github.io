@@ -112,6 +112,7 @@ document.body.appendChild(app.view);
 
 const ColorMessages = {
 	'000000': function(p) {
+		console.log('STOP');
 		return p.stop(this);
 	},
 	'5fcde4': function(p) {
@@ -120,13 +121,18 @@ const ColorMessages = {
 	'5b6ee1': function(p) {
 		return p.swim(this);
 	},
+	'76428a': function (p) {
+		return p.fall(this);
+	},
 	'ff0001': function(p) {
+		console.log('GO WEST');
 		return p.goWest(this);
 	},
 	'ff0011': function(p) {
 		return p.goNorth(this);
 	},
 	'ff0021': function(p) {
+		console.log('GO EAST');
 		return p.goEast(this);
 	},
 	'ff0031': function(p) {
@@ -167,12 +173,17 @@ function getPixels(sprite) {
 	return ctx.getImageData(0, 0, sprite.width, sprite.height).data;
 }
 
-const room = {
-	roomState: 'day',
-	states: {},
-	colorToMessage: ColorMessages,
+const Rooms = {
+};
 
-	setAnimation: function(container) {
+function Room(name) {
+	this.name = name;
+	Rooms[name] = this;
+	this.roomState = '';
+	this.states = {};
+	this.colorToMessage = ColorMessages;
+	this.connections = {};
+	this.setAnimation = function(container) {
 		const state = this.states[this.roomState];
 		console.log(this);
 		Object.keys(state.layers)
@@ -180,8 +191,34 @@ const room = {
 				state.layers[z].play();
 				container.addChild(state.layers[z]);
 			});
-	}
-};
+	};
+
+	this.moveTo = function (obj, travelling, roomName) {
+		const objMap = obj.maps[obj.currentMap];
+		const roomMap = this.states[this.roomState].map;
+		console.log(objMap);
+		console.log(roomMap);
+		const xCenter = Math.floor(objMap.width * objMap.x);
+		const yCenter = Math.floor(objMap.height * objMap.y);
+		if(travelling == 'east') {
+			obj.x = (objMap.width - xCenter) + 2;
+			obj.y = (roomMap.height  - 6) - (objMap.height - yCenter);
+		} else if (travelling == 'west') {
+			obj.x = (roomMap.width - 2) - (objMap.width - xCenter);
+			obj.y = (roomMap.height  - 6) - (objMap.height - yCenter);
+		}
+		console.log(obj);
+		console.log('new x y ' + obj.x + ', ' + obj.y);
+		obj.currentRoom = this;
+	};
+}
+
+new Room('room0');
+Rooms.room0.connections.east = 'room1';
+Rooms.room0.roomState = 'day';
+new Room('room1');
+Rooms.room1.connections.west = 'room0';
+
 
 function loadRoomFromSheet(room, roomName, spritesheet) {
 	const animations = {};
@@ -228,6 +265,7 @@ function loadRoomFromSheet(room, roomName, spritesheet) {
 }
 
 const player = {
+	currentRoom: Rooms.room0,
 	x: 110, y: 318,
 	dx: 0, dy: 0,
 	animState: '',
@@ -250,6 +288,11 @@ const player = {
 		console.log('west!');
 		this.dx = 0;
 		this.dy = 0;
+		console.log(this.currentRoom.connections);
+		if('west' in this.currentRoom.connections) {
+			const newRoom = Rooms[this.currentRoom.connections.west];
+			newRoom.moveTo(this, 'west', this.currentRoom.connections.west);
+		}
 		return true;
 	},
 	goNorth: function (sender) {
@@ -262,12 +305,32 @@ const player = {
 		console.log('east!');
 		this.dx = 0;
 		this.dy = 0;
+		console.log(this.currentRoom.connections);
+		if('east' in this.currentRoom.connections) {
+			const newRoom = Rooms[this.currentRoom.connections.east];
+			newRoom.moveTo(this, 'east', this.currentRoom.connections.east);
+		}
 		return true;
 	},
 	goSouth: function (sender) {
 		console.log('south!');
 		this.dx = 0;
 		this.dy = 0;
+		return true;
+	},
+	fallState: false,
+	fallCount: 0,
+	fall: function (sender) {
+		if(this.fallState) {
+			this.fallState = true;
+			this.fallCount = 0;
+		} else if (this.fallcount > 44) {
+			console.log('player fell too far.');
+		} else {
+			this.fallCount += 4;
+		}
+		this.dx = 0;
+		this.dy = 4;
 		return true;
 	},
 
@@ -281,6 +344,9 @@ const player = {
 		if(newAnim != this.animState) {
 			container.removeChild(this.animations[this.animState]);
 			this.animState = newAnim;
+			this.animations[this.animState].x = this.x;
+			this.animations[this.animState].y = this.y;
+			this.animations[this.animState].zIndex = this.y;
 			this.animations[this.animState].play();
 			container.addChild(this.animations[this.animState]);
 		}
@@ -338,9 +404,10 @@ function moveAndCollide(obj, room) {
 	for(let x = 0; x < objMap.width; x++) {
 		if(flag) { break; }
 		const roomX = (obj.x + obj.dx + x) - Math.floor(objMap.width * objMap.x);
-
+		if((roomX < 0) || (roomX >= roomMap.width)) { continue; }
 		for(let y = 0; y < objMap.height; y++) {
 			const roomY = (obj.y + obj.dy + y) - Math.floor(objMap.height * objMap.y);
+			if((roomY < 0) || (roomY >= roomMap.height)) { continue; }
 			const objOffset = (x + (y * objMap.width)) * 4;
 			const roomOffset = (roomX + (roomY * roomMap.width)) * 4;
 
@@ -356,6 +423,8 @@ function moveAndCollide(obj, room) {
 				+ ((roomMap.pixels[roomOffset + 1] < 16) ? '0' : '') + roomMap.pixels[roomOffset + 1].toString(16)
 				+ ((roomMap.pixels[roomOffset + 2] < 16) ? '0' : '') + roomMap.pixels[roomOffset + 2].toString(16);
 			if(rgb in room.colorToMessage) {
+//				console.log(rgb);
+//				console.log('rx,y ' + roomX + ', ' + roomY);
 				flag = room.colorToMessage[rgb](obj);
 			}
 			if(flag) { break; }
@@ -372,6 +441,7 @@ function moveAndCollide(obj, room) {
 // Consider that WIDTH and HEIGHT are defined as the width and height of your unresized game in pixels.
 function resize (app) {
 	return function () {
+		const room = player.currentRoom;
 		const roomMap = room.states[room.roomState].map;
 		const WIDTH = roomMap.width;
 		const HEIGHT = roomMap.height;
@@ -406,38 +476,46 @@ function resize (app) {
 	};
 }
 
-// Perform initial resizing
 // Add event listener so that our resize function runs every time the
 // browser window is resized.
 window.addEventListener("resize", resize(app));
-console.log('here');
 
 app.loader
 	.add("sprite-test-v2.json")
 	.add("room0.json")
+	.add("room1.json")
 	.load(
 		(loader, resources) => {
 			const screen = new PIXI.Container();
 			screen.sortableChildren = true;
 			app.stage.addChild(screen);
 
-			const roomSheet = resources["room0.json"].spritesheet;
-			console.log(roomSheet);
+			loadRoomFromSheet(Rooms.room0, 'room0', resources["room0.json"].spritesheet);
+			loadRoomFromSheet(Rooms.room1, 'room1', resources["room1.json"].spritesheet);
 
-			loadRoomFromSheet(room, 'room0', roomSheet);
-			room.setAnimation(screen);
+			loadSpriteFromSheet(player, 'sprite-test-v2', resources["sprite-test-v2.json"].spritesheet);
 
+
+			player.currentRoom = Rooms.room0;
+			let currentRoom = player.currentRoom;
+			currentRoom.setAnimation(screen);
+			console.log('here1');
+			player.setAnimation(screen);
+			console.log('here2');
 			inputHandlers(player, screen);
 
-			const sheet2 = resources["sprite-test-v2.json"].spritesheet;
-			console.log(sheet2);
-			loadSpriteFromSheet(player, 'sprite-test-v2', sheet2);
 
 			resize(app)();
 			// Listen for frame updates
 			app.ticker.add(() => {
+				moveAndCollide(player, currentRoom);
+				if(currentRoom != player.currentRoom) {
+					screen.removeChildren();
+					player.currentRoom.setAnimation(screen);
+					resize(app)();
+				}
+				currentRoom = player.currentRoom;
 				player.setAnimation(screen);
-				moveAndCollide(player, room);
 			});
 		}
 	);

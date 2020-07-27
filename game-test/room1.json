@@ -1,0 +1,27 @@
+{ "frames": {
+   "room1 (tag:,frame:0,z:0)": {
+    "frame": { "x": 0, "y": 0, "w": 600, "h": 400 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 600, "h": 400 },
+    "sourceSize": { "w": 600, "h": 400 },
+    "duration": 100
+   },
+   "room1 (tag:,frame:0,map)": {
+    "frame": { "x": 0, "y": 400, "w": 600, "h": 400 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 600, "h": 400 },
+    "sourceSize": { "w": 600, "h": 400 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "http://www.aseprite.org/",
+  "version": "1.2.21-x64",
+  "image": "room1.png",
+  "format": "RGBA8888",
+  "size": { "w": 600, "h": 800 },
+  "scale": "1"
+ }
+}
