@@ -35,6 +35,9 @@ Export a room:
 `aseprite -b --split-layers --all-layers room0.aseprite --sheet room0.png --data room0.json`
 aseprite -b --split-layers --all-layers --filename-format "{title} (tag:{tag},frame:{frame},{layer})" room0.aseprite --sheet room0.png --data room0.json
 
+Export icons
+aseprite -b --filename-format "{title} (tag:{tag},frame:{frame},{layer})" icons.aseprite --sheet icons.png --data icons.json
+
 {title} (tag:{tag},{layer},frame:{frame})
 
 https://ihatetomatoes.net/how-to-work-with-images-and-pixi-js/
@@ -42,7 +45,7 @@ https://ihatetomatoes.net/how-to-work-with-images-and-pixi-js/
 */
 
 // http://scottmcdonnell.github.io/pixi-examples/index.html?s=demos&f=interactivity.js&title=Interactivity
-function inputHandlers(player, room) {
+function inputHandlers(player, screen) {
 	function mvLeft() {
 		console.log('left');
 		player.dx = (player.dx < 0) ? 0 : -2;
@@ -79,8 +82,8 @@ function inputHandlers(player, room) {
 
 	function no_op() {}
 
-	room.interactive = true;
-	room
+	screen.interactive = true;
+	screen
 		// set the mousedown and touchstart callback...
 		.on('mousedown', no_op)
 		.on('touchstart', no_op)
@@ -95,10 +98,16 @@ function inputHandlers(player, room) {
 		.on('mouseover', no_op)
 
 		// set the mouseout callback...
-		.on('mouseout', no_op);
+		.on('mouseout', no_op)
 		// you can also listen to click and tap events :
-		//.on('click', noop)
-
+		.on('click', event => {
+			console.log('click');
+			console.log(event);
+			const p = event.data.getLocalPosition(screen);
+			console.log(p);
+		})
+		.on('pointertap', event => {
+		});
 }
 
 // The application will create a renderer using WebGL, if possible,
@@ -178,11 +187,13 @@ const Rooms = {
 
 function Room(name) {
 	this.name = name;
+	this.spritesheet = name;
 	Rooms[name] = this;
 	this.roomState = '';
 	this.states = {};
 	this.colorToMessage = ColorMessages;
 	this.connections = {};
+	this.contains = [];
 	this.setAnimation = function(container) {
 		const state = this.states[this.roomState];
 		console.log(this);
@@ -191,6 +202,7 @@ function Room(name) {
 				state.layers[z].play();
 				container.addChild(state.layers[z]);
 			});
+		this.contains.forEach(obj => obj.display(container));
 	};
 
 	this.moveTo = function (obj, travelling, roomName) {
@@ -211,13 +223,38 @@ function Room(name) {
 		console.log('new x y ' + obj.x + ', ' + obj.y);
 		obj.currentRoom = this;
 	};
+
+	this.as = function (description) {
+		this.longDescription = description;
+		return this;
+	};
+
+	this.with = function (travel) {
+		if('west' in travel) {
+			this.connections.west = travel.west;
+		} else if('east' in travel) {
+			this.connections.east = travel.east;
+		} else if('north' in travel) {
+			this.connections.north = travel.north;
+		} else if('south' in travel) {
+			this.connections.south = travel.south;
+		}
+		return this;
+	};
+
+	this.having = function (gameObj) {
+		gameObj.placeInto(this);
+		this.contains.push(gameObj);
+	};
 }
 
-new Room('room0');
-Rooms.room0.connections.east = 'room1';
+new Room('room0')
+	.as('A large field with a boulder, tree, and pond.')
+	.with({ east: 'room1' });
 Rooms.room0.roomState = 'day';
-new Room('room1');
-Rooms.room1.connections.west = 'room0';
+new Room('room1')
+	.as('The foothills of a mountain with a large sinkhole nearby.')
+	.with({ west: 'room0' });
 
 
 function loadRoomFromSheet(room, roomName, spritesheet) {
@@ -359,6 +396,17 @@ const player = {
 	}
 };
 
+function collectAnimations(animations, obj) {
+	console.log(animations);
+	Object.keys(animations)
+		.forEach(name => {
+			console.log(animations[name]);
+			obj.animations[name] = new PIXI.AnimatedSprite(animations[name]);
+			obj.animations[name].animationSpeed = 0.167; 
+		});
+	console.log(obj.animations);
+}
+
 function loadSpriteFromSheet(obj, spriteName, spritesheet) {
 	const animations = {};
 	Object.keys(spritesheet.textures)
@@ -385,14 +433,7 @@ function loadSpriteFromSheet(obj, spriteName, spritesheet) {
 			}
 			console.log(info);
 		});
-	console.log(animations);
-	Object.keys(animations)
-		.forEach(name => {
-			console.log(animations[name]);
-			obj.animations[name] = new PIXI.AnimatedSprite(animations[name]);
-			obj.animations[name].animationSpeed = 0.167; 
-		});
-	console.log(obj.animations);
+	collectAnimations(animations, obj);
 }
 
 function moveAndCollide(obj, room) {
@@ -437,17 +478,77 @@ function moveAndCollide(obj, room) {
 	obj.updateAnimation();
 }
 
+const Verbs = {
+};
+
+function Verb(verb) {
+	this.name = verb
+	Verbs[verb] = this;
+	this.available = true;
+}
+
+
+new Verb('look');
+new Verb('walk');
+new Verb('take');
+new Verb('inventory');
+
+const uiChrome = {
+	icons: new PIXI.Container(),
+	animations: {},
+	verbs: {},
+	verbList: [],
+	width: 0,
+	height: 0,
+	addVerb: function (verb) {
+		if(!(verb in this.verbs)) {
+			this.verbList.push(verb);
+			if(verb in Verbs) { this.verbs[verb] = Verbs[verb]; }
+		}
+	},
+	display: function () {
+		this.icons.interactive = true;
+		this.verbList.forEach(verb => {
+			if(!Verbs[verb].available) { return; }
+			const anim = this.animations[verb];
+			anim.interactive = true;
+			this.icons.addChild(anim);
+			anim.play();
+			anim.x = this.width + 1;
+			this.width = anim.x + anim.width;
+			this.height = Math.max(this.height, anim.height);
+			console.log(verb + ', anim extents: ' + anim.width + ', ' + anim.height);
+			anim.on('click', evt => { console.log(verb); });
+		});
+	}
+};
+
+function loadIconsFromSheet(obj, iconsName, spritesheet) {
+	const animations = {};
+	Object.keys(spritesheet.textures)
+		.forEach(name => {
+			if(name.indexOf(iconsName + ' (') != 0) { return; }
+			const info = parseFrameName(name);
+			if('tag' in info) {
+				obj.addVerb(info.tag);
+				if (!(info.tag in animations)) {
+					animations[info.tag] = [];
+				}
+				animations[info.tag].push(spritesheet.textures[name]);
+			}
+		});
+	collectAnimations(animations, obj);
+}
+
+const screen = new PIXI.Container();
 //https://medium.com/@michelfariarj/scale-a-pixi-js-game-to-fit-the-screen-1a32f8730e9c
 // Consider that WIDTH and HEIGHT are defined as the width and height of your unresized game in pixels.
-function resize (app) {
-	return function () {
-		const room = player.currentRoom;
-		const roomMap = room.states[room.roomState].map;
-		const WIDTH = roomMap.width;
-		const HEIGHT = roomMap.height;
+function resize () {
+	const WIDTH = screen.width + screen.x;
+	const HEIGHT = screen.height + screen.y;
 
-		const vpw = window.innerWidth -2;  // Width of the viewport
-		const vph = window.innerHeight - 2; // Height of the viewport
+		const vpw = window.innerWidth - 16;  // Width of the viewport
+		const vph = window.innerHeight - 16; // Height of the viewport
 		let nvw; // New game width
 		let nvh; // New game height
 
@@ -473,25 +574,33 @@ function resize (app) {
     
 		// This command scales the stage to fit the new size of the game.
 		app.stage.scale.set(nvw / WIDTH, nvh / HEIGHT);
-	};
 }
 
 // Add event listener so that our resize function runs every time the
 // browser window is resized.
-window.addEventListener("resize", resize(app));
+window.addEventListener("resize", resize);
 
 app.loader
 	.add("sprite-test-v2.json")
 	.add("room0.json")
 	.add("room1.json")
+	.add("icons.json")
 	.load(
 		(loader, resources) => {
-			const screen = new PIXI.Container();
 			screen.sortableChildren = true;
+			app.stage.addChild(uiChrome.icons);
 			app.stage.addChild(screen);
 
-			loadRoomFromSheet(Rooms.room0, 'room0', resources["room0.json"].spritesheet);
-			loadRoomFromSheet(Rooms.room1, 'room1', resources["room1.json"].spritesheet);
+			loadIconsFromSheet(uiChrome, 'icons', resources["icons.json"].spritesheet);
+			uiChrome.display();
+			screen.y = uiChrome.height + 1;
+
+			Object.keys(Rooms)
+				.forEach(name => {
+					loadRoomFromSheet(Rooms[name],
+						Rooms[name].spritesheet,
+						resources[Rooms[name].spritesheet + '.json'].spritesheet)
+				});
 
 			loadSpriteFromSheet(player, 'sprite-test-v2', resources["sprite-test-v2.json"].spritesheet);
 
@@ -505,14 +614,14 @@ app.loader
 			inputHandlers(player, screen);
 
 
-			resize(app)();
+			resize();
 			// Listen for frame updates
 			app.ticker.add(() => {
 				moveAndCollide(player, currentRoom);
 				if(currentRoom != player.currentRoom) {
 					screen.removeChildren();
 					player.currentRoom.setAnimation(screen);
-					resize(app)();
+					resize();
 				}
 				currentRoom = player.currentRoom;
 				player.setAnimation(screen);
