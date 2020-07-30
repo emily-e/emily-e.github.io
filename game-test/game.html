@@ -6,6 +6,7 @@
 	<script src="pixi.min.js"></script>
 </head>
 <body>
+	<script src="game.js"></script>
 	<script type="text/javascript">
 'use strict';
 /*
@@ -119,6 +120,7 @@ const app = new PIXI.Application(); //{ resizeTo: window });
 // can then insert into the DOM
 document.body.appendChild(app.view);
 
+
 const ColorMessages = {
 	'000000': function(p) {
 		console.log('STOP');
@@ -148,39 +150,7 @@ const ColorMessages = {
 		return p.goSouth(this);
 	}
 }
-/*
-class Room {
 
-}
-*/
-
-function parseFrameName(name) {
-	const info = {};
-	name.substring(name.indexOf('(') + 1, name.lastIndexOf(')'))
-		.split(',')
-		.forEach(kv => {
-			const pair = kv.split(':');
-			info[pair[0]] = pair[1];
-		});
-	return info;
-}
-
-function getPixels(sprite) {
-	const canvas = document.createElement('canvas');
-	console.log('Char Map: width - ' + sprite.width + ' height - ' + sprite.height);
-	canvas.width = sprite.width;
-	canvas.height = sprite.height;
-	console.log('txt ' + sprite.texture.orig.x + ' ' + sprite.texture.orig.y);
-
-	const ctx = canvas.getContext('2d');
-	ctx.drawImage(sprite.texture.baseTexture.resource.source,
-		sprite.texture.orig.x, sprite.texture.orig.y,
-		sprite.texture.orig.width, sprite.texture.orig.height,
-		0,0,
-		sprite.width, sprite.height);
-
-	return ctx.getImageData(0, 0, sprite.width, sprite.height).data;
-}
 
 const Rooms = {
 };
@@ -189,13 +159,13 @@ function Room(name) {
 	this.name = name;
 	this.spritesheet = name;
 	Rooms[name] = this;
-	this.roomState = '';
+	this.currentState = '';
 	this.states = {};
 	this.colorToMessage = ColorMessages;
 	this.connections = {};
 	this.contains = [];
 	this.setAnimation = function(container) {
-		const state = this.states[this.roomState];
+		const state = this.states[this.currentState];
 		console.log(this);
 		Object.keys(state.layers)
 			.forEach(z => {
@@ -207,7 +177,7 @@ function Room(name) {
 
 	this.moveTo = function (obj, travelling, roomName) {
 		const objMap = obj.maps[obj.currentMap];
-		const roomMap = this.states[this.roomState].map;
+		const roomMap = this.states[this.currentState].map;
 		console.log(objMap);
 		console.log(roomMap);
 		const xCenter = Math.floor(objMap.width * objMap.x);
@@ -243,63 +213,77 @@ function Room(name) {
 	};
 
 	this.having = function (gameObj) {
-		gameObj.placeInto(this);
+		gameObj.setLocation(this);
 		this.contains.push(gameObj);
+	};
+}
+
+const GameObjects = {
+}
+
+function GameObject(name) {
+	this.name = name;
+	this.spritesheet = name;
+	GameObjects[name] = this;
+	this.currentState = '';
+	this.states = {};
+	this.colorToMessage = ColorMessages;
+	this.x = 0;
+	this.y = 0;
+	this.dx = 0;
+	this.dy = 0;
+	this.displayName = name;
+	this.displayState = '';
+
+	this.as = function (description) {
+		this.longDescription = description;
+		return this;
+	};
+	this.aka = function (name) {
+		this.displayName = name;
+		return this;
+	};
+	this.setXY = function(x, y) {
+		this.x = x;
+		this.y = y;
+		return this;
+	};
+	this.setState = function (state) {
+		this.currentState = state;
+		return this;
+	};
+
+	this.setLocation = function (room) {
+		this.currentLocation = room;
+	};
+
+	this.display = function (container) {
+		const state = this.states[this.currentState];
+		console.log(this);
+		Object.keys(state.layers)
+			.forEach(z => {
+				state.layers[z].x = this.x;
+				state.layers[z].y = this.y;
+				state.layers[z].zIndex = parseInt(this.y) + parseInt(z);
+				state.layers[z].play();
+				container.addChild(state.layers[z]);
+			});
+/*		state.map.sprite.x = this.x;
+		state.map.sprite.y = this.y;
+		state.map.sprite.zIndex = this.y + 1;
+		container.addChild(state.map.sprite);*/
 	};
 }
 
 new Room('room0')
 	.as('A large field with a boulder, tree, and pond.')
-	.with({ east: 'room1' });
-Rooms.room0.roomState = 'day';
+	.with({ east: 'room1' })
+	.having((new GameObject('chest')).setXY(590, 185).setState('closed'));
+Rooms.room0.currentState = 'day';
 new Room('room1')
 	.as('The foothills of a mountain with a large sinkhole nearby.')
 	.with({ west: 'room0' });
 
-
-function loadRoomFromSheet(room, roomName, spritesheet) {
-	const animations = {};
-	Object.keys(spritesheet.textures)
-		.forEach(name => {
-			if(name.indexOf(roomName + ' (') != 0) { return; }
-			const info = parseFrameName(name);
-			console.log(info);
-			if(!('tag' in info)) { info.tag = 'default'; }
-			if(!(info.tag in room.states)) {
-				room.states[info.tag] = {
-					layers: {},
-					map: {}
-				};
-			}
-			const tag = room.states[info.tag];
-
-			// https://www.html5gamedevs.com/topic/18018-how-to-read-pixel-color/
-			// https://pixijs.io/examples/?v=v5.0.0-rc.2#/textures/gradient-resource.js
-			if('map' in info) {
-				const map = new PIXI.Sprite(spritesheet.textures[name]);
-				tag.map = {
-					pixels: getPixels(map),
-					width: map.width, height: map.height
-				};
-			} else if('z' in info) {
-				if (!(info.tag in animations)) { animations[info.tag] = {}; }
-				const animTag = animations[info.tag];
-				if(!(info.z in animTag)) { animTag[info.z] = []; }
-				animTag[info.z].push(spritesheet.textures[name]);
-			}
-		});
-	console.log(animations);
-	Object.keys(animations)
-		.forEach(tag => {
-			console.log(tag);
-			Object.keys(animations[tag])
-				.forEach(z => {
-					room.states[tag].layers[z] = new PIXI.AnimatedSprite(animations[tag][z]);
-					room.states[tag].layers[z].zIndex = Number.parseInt(z);
-					room.states[tag].layers[z].animationSpeed = 0.167; 
-				});
-		});
-}
 
 const player = {
 	currentRoom: Rooms.room0,
@@ -386,6 +370,11 @@ const player = {
 			this.animations[this.animState].zIndex = this.y;
 			this.animations[this.animState].play();
 			container.addChild(this.animations[this.animState]);
+/*
+			this.maps.default.sprite.x = this.x;
+			this.maps.default.sprite.y = this.y;
+			this.maps.default.sprite.zIndex = this.y + 1;
+			container.addChild(this.maps.default.sprite);*/
 		}
 	},
 
@@ -393,61 +382,27 @@ const player = {
 		this.animations[this.animState].x = this.x;
 		this.animations[this.animState].y = this.y;
 		this.animations[this.animState].zIndex = this.y;
+/*
+		this.maps.default.sprite.x = this.x;
+		this.maps.default.sprite.y = this.y;
+		this.maps.default.sprite.zIndex = this.y + 1;*/
 	}
 };
 
-function collectAnimations(animations, obj) {
-	console.log(animations);
-	Object.keys(animations)
-		.forEach(name => {
-			console.log(animations[name]);
-			obj.animations[name] = new PIXI.AnimatedSprite(animations[name]);
-			obj.animations[name].animationSpeed = 0.167; 
-		});
-	console.log(obj.animations);
-}
 
-function loadSpriteFromSheet(obj, spriteName, spritesheet) {
-	const animations = {};
-	Object.keys(spritesheet.textures)
-		.forEach(name => {
-			if(name.indexOf(spriteName + ' (') != 0) { return; }
-			const info = parseFrameName(name);
-			if('tag' in info) {
-				if(info.tag == 'map') {
-					const map = new PIXI.Sprite(spritesheet.textures[name]);
-					const mapName = ('map' in info) ? info.map : 'default';
-					obj.maps[mapName] = {
-						pixels: getPixels(map),
-						x: map.anchor.x, y: map.anchor.y,
-						width: map.width, height: map.height
-					};
-					console.log(obj.maps[mapName].pixels);
-					console.log(map.anchor);
-				} else {
-					if (!(info.tag in animations)) {
-						animations[info.tag] = [];
-					}
-					animations[info.tag].push(spritesheet.textures[name]);
-				}
-			}
-			console.log(info);
-		});
-	collectAnimations(animations, obj);
-}
-
-function moveAndCollide(obj, room) {
-	const roomMap = room.states[room.roomState].map;
+function collide(obj, ox, oy, dx, dy, room) {
+	const roomMap = room.states[room.currentState].map;
 
 	const objMap = obj.maps[obj.currentMap];
 
-	let flag = false;
+	const colors = {};
+	const roomAnchorX = Math.floor(roomMap.width * roomMap.x);
+	const roomAnchorY = Math.floor(roomMap.height * roomMap.y);
 	for(let x = 0; x < objMap.width; x++) {
-		if(flag) { break; }
-		const roomX = (obj.x + obj.dx + x) - Math.floor(objMap.width * objMap.x);
+		const roomX = (ox + dx + x) - Math.floor(objMap.width * objMap.x) + roomAnchorX;
 		if((roomX < 0) || (roomX >= roomMap.width)) { continue; }
 		for(let y = 0; y < objMap.height; y++) {
-			const roomY = (obj.y + obj.dy + y) - Math.floor(objMap.height * objMap.y);
+			const roomY = (oy + dy + y) - Math.floor(objMap.height * objMap.y) + roomAnchorY;
 			if((roomY < 0) || (roomY >= roomMap.height)) { continue; }
 			const objOffset = (x + (y * objMap.width)) * 4;
 			const roomOffset = (roomX + (roomY * roomMap.width)) * 4;
@@ -456,24 +411,20 @@ function moveAndCollide(obj, room) {
 			if((roomOffset < 0) || (roomOffset > (roomMap.pixels.length - 4))) { continue; }
 			// player map is transparent
 			if(objMap.pixels[objOffset + 3] == 0) { continue; }
-			//console.log('poffs ' + playerOffset + ' xy ' + x + ', ' + y + 'alpha ' + player.pixels[playerOffset + 3] + 'r ' + player.pixels[playerOffset]);
 			// room map is transparent
 			if(roomMap.pixels[roomOffset + 3] == 0) { continue; }
 
 			const rgb = ((roomMap.pixels[roomOffset] < 16) ? '0' : '') + roomMap.pixels[roomOffset].toString(16)
 				+ ((roomMap.pixels[roomOffset + 1] < 16) ? '0' : '') + roomMap.pixels[roomOffset + 1].toString(16)
 				+ ((roomMap.pixels[roomOffset + 2] < 16) ? '0' : '') + roomMap.pixels[roomOffset + 2].toString(16);
+			if(rgb in colors) { continue; }
 			if(rgb in room.colorToMessage) {
-//				console.log(rgb);
-//				console.log('rx,y ' + roomX + ', ' + roomY);
-				flag = room.colorToMessage[rgb](obj);
+				colors[rgb] = { roomX: roomX, roomY: roomY, objX: x, objY: y };
 			}
-			if(flag) { break; }
 		}
 	}
-	obj.x += obj.dx;
-	obj.y += obj.dy;
-	if((obj.dx != 0) || (obj.dy != 0)) { console.log('px,y ' + obj.x + ', ' + obj.y); }
+	Object.keys(colors).forEach(rgb => room.colorToMessage[rgb](obj));
+//	if((obj.dx != 0) || (obj.dy != 0)) { console.log('px,y ' + ox + ', ' + oy); }
 
 	obj.updateAnimation();
 }
@@ -508,6 +459,8 @@ const uiChrome = {
 	},
 	display: function () {
 		this.icons.interactive = true;
+		let currentVerb = '';
+		let currentGraphics = {};
 		this.verbList.forEach(verb => {
 			if(!Verbs[verb].available) { return; }
 			const anim = this.animations[verb];
@@ -518,27 +471,30 @@ const uiChrome = {
 			this.width = anim.x + anim.width;
 			this.height = Math.max(this.height, anim.height);
 			console.log(verb + ', anim extents: ' + anim.width + ', ' + anim.height);
-			anim.on('click', evt => { console.log(verb); });
+			anim.on('click', evt => {
+				if(verb != currentVerb) {
+					if(currentVerb != '') {
+						this.icons.removeChild(currentGraphics);
+					}
+					const graphics = new PIXI.Graphics();
+					graphics.beginFill(0xfbf236, 0.5);
+					graphics.lineStyle(1, 0xfbf236, 0.8);
+					graphics.drawRect(0, 0, anim.width, anim.height);
+					graphics.x = anim.x;
+					this.icons.addChild(graphics);
+					currentVerb = verb;
+					currentGraphics = graphics;
+				} else {
+					if(currentVerb != '') {
+						this.icons.removeChild(currentGraphics);
+						currentVerb = '';
+					}
+				}
+				console.log(verb); 
+			});
 		});
 	}
 };
-
-function loadIconsFromSheet(obj, iconsName, spritesheet) {
-	const animations = {};
-	Object.keys(spritesheet.textures)
-		.forEach(name => {
-			if(name.indexOf(iconsName + ' (') != 0) { return; }
-			const info = parseFrameName(name);
-			if('tag' in info) {
-				obj.addVerb(info.tag);
-				if (!(info.tag in animations)) {
-					animations[info.tag] = [];
-				}
-				animations[info.tag].push(spritesheet.textures[name]);
-			}
-		});
-	collectAnimations(animations, obj);
-}
 
 const screen = new PIXI.Container();
 //https://medium.com/@michelfariarj/scale-a-pixi-js-game-to-fit-the-screen-1a32f8730e9c
@@ -584,6 +540,7 @@ app.loader
 	.add("sprite-test-v2.json")
 	.add("room0.json")
 	.add("room1.json")
+	.add("chest.json")
 	.add("icons.json")
 	.load(
 		(loader, resources) => {
@@ -597,9 +554,17 @@ app.loader
 
 			Object.keys(Rooms)
 				.forEach(name => {
-					loadRoomFromSheet(Rooms[name],
+					loadFromSheet(Rooms[name],
 						Rooms[name].spritesheet,
 						resources[Rooms[name].spritesheet + '.json'].spritesheet)
+				});
+			Object.keys(GameObjects)
+				.forEach(name => {
+					console.log(name);
+					loadFromSheet(GameObjects[name],
+						GameObjects[name].spritesheet,
+						resources[GameObjects[name].spritesheet + '.json'].spritesheet)
+					console.log(GameObject[name]);
 				});
 
 			loadSpriteFromSheet(player, 'sprite-test-v2', resources["sprite-test-v2.json"].spritesheet);
@@ -617,7 +582,14 @@ app.loader
 			resize();
 			// Listen for frame updates
 			app.ticker.add(() => {
-				moveAndCollide(player, currentRoom);
+				collide(player, player.x, player.y, player.dx, player.dy, currentRoom);
+				currentRoom.contains.forEach(gameObj => {
+					collide(player, player.x - gameObj.x, player.y - gameObj.y, 
+						player.dx, player.dy, gameObj);
+				});
+				player.x += player.dx;
+				player.y += player.dy;
+
 				if(currentRoom != player.currentRoom) {
 					screen.removeChildren();
 					player.currentRoom.setAnimation(screen);

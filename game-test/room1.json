@@ -7,7 +7,7 @@
     "sourceSize": { "w": 600, "h": 400 },
     "duration": 100
    },
-   "room1 (tag:,frame:0,map)": {
+   "room1 (tag:,frame:0,map:default)": {
     "frame": { "x": 0, "y": 400, "w": 600, "h": 400 },
     "rotated": false,
     "trimmed": false,

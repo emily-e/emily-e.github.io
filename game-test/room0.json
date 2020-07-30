@@ -71,7 +71,7 @@
     "sourceSize": { "w": 640, "h": 320 },
     "duration": 100
    },
-   "room0 (tag:day,frame:0,map)": {
+   "room0 (tag:day,frame:0,map:default)": {
     "frame": { "x": 0, "y": 960, "w": 640, "h": 320 },
     "rotated": false,
     "trimmed": false,
@@ -79,7 +79,7 @@
     "sourceSize": { "w": 640, "h": 320 },
     "duration": 100
    },
-   "room0 (tag:day,frame:1,map)": {
+   "room0 (tag:day,frame:1,map:default)": {
     "frame": { "x": 640, "y": 960, "w": 640, "h": 320 },
     "rotated": false,
     "trimmed": false,
@@ -87,7 +87,7 @@
     "sourceSize": { "w": 640, "h": 320 },
     "duration": 100
    },
-   "room0 (tag:night,frame:2,map)": {
+   "room0 (tag:night,frame:2,map:default)": {
     "frame": { "x": 1280, "y": 960, "w": 640, "h": 320 },
     "rotated": false,
     "trimmed": false,
