@@ -81,6 +81,7 @@ function inputHandlers(player, screen) {
 		if(evt.keyCode == 40) { mvDown(); }
 	});
 
+/*
 	function no_op() {}
 
 	screen.interactive = true;
@@ -109,6 +110,7 @@ function inputHandlers(player, screen) {
 		})
 		.on('pointertap', event => {
 		});
+*/
 }
 
 // The application will create a renderer using WebGL, if possible,
@@ -199,6 +201,10 @@ function Room(name) {
 		return this;
 	};
 
+	this.getDescription = function() {
+		return ('longDescription' in this) ? this.longDescription : '';
+	}
+
 	this.with = function (travel) {
 		if('west' in travel) {
 			this.connections.west = travel.west;
@@ -234,6 +240,10 @@ function GameObject(name) {
 	this.dy = 0;
 	this.displayName = name;
 	this.displayState = '';
+
+	this.getDescription = function() {
+		return ('longDescription' in this) ? this.longDescription : '';
+	}
 
 	this.as = function (description) {
 		this.longDescription = description;
@@ -282,7 +292,8 @@ new Room('room0')
 Rooms.room0.currentState = 'day';
 new Room('room1')
 	.as('The foothills of a mountain with a large sinkhole nearby.')
-	.with({ west: 'room0' });
+	.with({ west: 'room0' })
+	.having((new GameObject('key')).setXY(77, 247));
 
 
 const player = {
@@ -390,19 +401,15 @@ const player = {
 };
 
 
-function collide(obj, ox, oy, dx, dy, room) {
-	const roomMap = room.states[room.currentState].map;
-
-	const objMap = obj.maps[obj.currentMap];
-
+function collide(objMap, ox, oy, colorToMessage, roomMap) {
 	const colors = {};
 	const roomAnchorX = Math.floor(roomMap.width * roomMap.x);
 	const roomAnchorY = Math.floor(roomMap.height * roomMap.y);
 	for(let x = 0; x < objMap.width; x++) {
-		const roomX = (ox + dx + x) - Math.floor(objMap.width * objMap.x) + roomAnchorX;
+		const roomX = (ox + x) - Math.floor(objMap.width * objMap.x) + roomAnchorX;
 		if((roomX < 0) || (roomX >= roomMap.width)) { continue; }
 		for(let y = 0; y < objMap.height; y++) {
-			const roomY = (oy + dy + y) - Math.floor(objMap.height * objMap.y) + roomAnchorY;
+			const roomY = (oy + y) - Math.floor(objMap.height * objMap.y) + roomAnchorY;
 			if((roomY < 0) || (roomY >= roomMap.height)) { continue; }
 			const objOffset = (x + (y * objMap.width)) * 4;
 			const roomOffset = (roomX + (roomY * roomMap.width)) * 4;
@@ -418,15 +425,13 @@ function collide(obj, ox, oy, dx, dy, room) {
 				+ ((roomMap.pixels[roomOffset + 1] < 16) ? '0' : '') + roomMap.pixels[roomOffset + 1].toString(16)
 				+ ((roomMap.pixels[roomOffset + 2] < 16) ? '0' : '') + roomMap.pixels[roomOffset + 2].toString(16);
 			if(rgb in colors) { continue; }
-			if(rgb in room.colorToMessage) {
+			if(rgb in colorToMessage) {
 				colors[rgb] = { roomX: roomX, roomY: roomY, objX: x, objY: y };
 			}
 		}
 	}
-	Object.keys(colors).forEach(rgb => room.colorToMessage[rgb](obj));
+	return colors;
 //	if((obj.dx != 0) || (obj.dy != 0)) { console.log('px,y ' + ox + ', ' + oy); }
-
-	obj.updateAnimation();
 }
 
 const Verbs = {
@@ -436,13 +441,70 @@ function Verb(verb) {
 	this.name = verb
 	Verbs[verb] = this;
 	this.available = true;
+
+	this.activate = function () {
+		console.log('on');
+	};
+
+	this.deactivate = function () {
+		console.log('off');
+	};
+
+	this.target = function (x, y) {
+		return false;
+	};
 }
 
 
-new Verb('look');
+
+
+const verbColors = {
+	'6abe30': function(p) {
+		console.log('VERB');
+	}
+};
+
+const pixelMap = {
+	pixels: [ 0,0,0,255 ],
+	x: 0, y: 0, width: 1, height: 1
+};
+
+const look = new Verb('look');
+look.target = function (x,y) {
+	console.log('look ' + x + ', ' + y);
+	let flag = false;
+	const room = player.currentRoom;
+	console.log(room);
+	room.contains.forEach(gameObj => {
+		if(flag) { return; }
+		console.log(gameObj);
+		const state = gameObj.states[gameObj.currentState];
+		if('look' in state.maps) {
+			console.log('look map available');
+			Object.keys(collide(pixelMap, x - gameObj.x, y - gameObj.y, verbColors, state.maps.look))
+				.forEach(rgb => {
+					flag = true;
+					console.log(gameObj.getDescription());
+				});
+		} else {
+			console.log('no look map');
+		}
+	});
+	if(!flag) {
+		console.log(room.getDescription());
+	}
+	return false;
+};
 new Verb('walk');
 new Verb('take');
 new Verb('inventory');
+
+/*
+				currentRoom.contains.forEach(gameObj => {
+					collide(player, player.x - gameObj.x, player.y - gameObj.y, 
+						player.dx, player.dy, gameObj);
+				});
+*/
 
 const uiChrome = {
 	icons: new PIXI.Container(),
@@ -457,10 +519,31 @@ const uiChrome = {
 			if(verb in Verbs) { this.verbs[verb] = Verbs[verb]; }
 		}
 	},
-	display: function () {
-		this.icons.interactive = true;
+	display: function (screen) {
 		let currentVerb = '';
 		let currentGraphics = {};
+
+		const that = this;
+		screen.interactive = true;
+		screen
+			.on('click', event => {
+				console.log('click');
+				console.log(event);
+				const p = event.data.getLocalPosition(screen);
+				console.log(p);
+				if (currentVerb != '') {
+					const hitX = Math.floor(p.x);
+					const hitY = Math.floor(p.y);
+					if(!Verbs[currentVerb].target(hitX, hitY)) {
+						currentVerb = '';
+						that.icons.removeChild(currentGraphics);
+					}
+				}
+			})
+			.on('pointertap', event => {
+			});
+
+		this.icons.interactive = true;
 		this.verbList.forEach(verb => {
 			if(!Verbs[verb].available) { return; }
 			const anim = this.animations[verb];
@@ -475,6 +558,7 @@ const uiChrome = {
 				if(verb != currentVerb) {
 					if(currentVerb != '') {
 						this.icons.removeChild(currentGraphics);
+						Verbs[currentVerb].deactivate();
 					}
 					const graphics = new PIXI.Graphics();
 					graphics.beginFill(0xfbf236, 0.5);
@@ -484,10 +568,12 @@ const uiChrome = {
 					this.icons.addChild(graphics);
 					currentVerb = verb;
 					currentGraphics = graphics;
+					Verbs[verb].activate();
 				} else {
 					if(currentVerb != '') {
 						this.icons.removeChild(currentGraphics);
 						currentVerb = '';
+						Verbs[verb].deactivate();
 					}
 				}
 				console.log(verb); 
@@ -541,6 +627,7 @@ app.loader
 	.add("room0.json")
 	.add("room1.json")
 	.add("chest.json")
+	.add("key.json")
 	.add("icons.json")
 	.load(
 		(loader, resources) => {
@@ -549,7 +636,7 @@ app.loader
 			app.stage.addChild(screen);
 
 			loadIconsFromSheet(uiChrome, 'icons', resources["icons.json"].spritesheet);
-			uiChrome.display();
+			uiChrome.display(screen);
 			screen.y = uiChrome.height + 1;
 
 			Object.keys(Rooms)
@@ -582,13 +669,17 @@ app.loader
 			resize();
 			// Listen for frame updates
 			app.ticker.add(() => {
-				collide(player, player.x, player.y, player.dx, player.dy, currentRoom);
+				Object.keys(collide(player.maps[player.currentMap], player.x + player.dx, player.y + player.dy, currentRoom.colorToMessage,
+						currentRoom.states[currentRoom.currentState].map))
+					.forEach(rgb => currentRoom.colorToMessage[rgb](player));
 				currentRoom.contains.forEach(gameObj => {
-					collide(player, player.x - gameObj.x, player.y - gameObj.y, 
-						player.dx, player.dy, gameObj);
+					Object.keys(collide(player.maps[player.currentMap], player.x + player.dx - gameObj.x, player.y + player.dy - gameObj.y, 
+							gameObj.colorToMessage, gameObj.states[gameObj.currentState].map))
+						.forEach(rgb => gameObj.colorToMessage[rgb](player));
 				});
 				player.x += player.dx;
 				player.y += player.dy;
+				player.updateAnimation();
 
 				if(currentRoom != player.currentRoom) {
 					screen.removeChildren();
