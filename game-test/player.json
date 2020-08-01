@@ -1,0 +1,137 @@
+{ "frames": {
+   "player (tag:walk,frame:0,z:0)": {
+    "frame": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:walk,frame:1,z:0)": {
+    "frame": { "x": 233, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:walk,frame:2,z:0)": {
+    "frame": { "x": 466, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:walk,frame:3,z:0)": {
+    "frame": { "x": 699, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:walk,frame:4,z:0)": {
+    "frame": { "x": 932, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:walk,frame:5,z:0)": {
+    "frame": { "x": 1165, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:stand,frame:6,z:0)": {
+    "frame": { "x": 1398, "y": 0, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:walk,frame:0,map:default)": {
+    "frame": { "x": 0, "y": 233, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:walk,frame:1,map:default)": {
+    "frame": { "x": 233, "y": 233, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:walk,frame:2,map:default)": {
+    "frame": { "x": 466, "y": 233, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:walk,frame:3,map:default)": {
+    "frame": { "x": 699, "y": 233, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:walk,frame:4,map:default)": {
+    "frame": { "x": 932, "y": 233, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:walk,frame:5,map:default)": {
+    "frame": { "x": 1165, "y": 233, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   },
+   "player (tag:stand,frame:6,map:default)": {
+    "frame": { "x": 1398, "y": 233, "w": 233, "h": 233 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 233, "h": 233 },
+    "sourceSize": { "w": 233, "h": 233 },
+	"anchor": {"x":0.5,"y":1},
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "http://www.aseprite.org/",
+  "version": "1.2.21-x64",
+  "image": "player.png",
+  "format": "RGBA8888",
+  "size": { "w": 1631, "h": 466 },
+  "scale": "1"
+ }
+}

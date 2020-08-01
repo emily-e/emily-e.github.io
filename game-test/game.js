@@ -43,7 +43,83 @@ function GameData() {
 
 
 
+/* Movement related code */
+
+function collide(objMap, ox, oy, colorToMessage, roomMap) {
+	const colors = {};
+	const roomAnchorX = Math.floor(roomMap.width * roomMap.x);
+	const roomAnchorY = Math.floor(roomMap.height * roomMap.y);
+	for(let x = 0; x < objMap.width; x++) {
+		const roomX = (ox + x) - Math.floor(objMap.width * objMap.x) + roomAnchorX;
+		if((roomX < 0) || (roomX >= roomMap.width)) { continue; }
+		for(let y = 0; y < objMap.height; y++) {
+			const roomY = (oy + y) - Math.floor(objMap.height * objMap.y) + roomAnchorY;
+			if((roomY < 0) || (roomY >= roomMap.height)) { continue; }
+			const objOffset = (x + (y * objMap.width)) * 4;
+			const roomOffset = (roomX + (roomY * roomMap.width)) * 4;
+
+			// out of bounds on room
+			if((roomOffset < 0) || (roomOffset > (roomMap.pixels.length - 4))) { continue; }
+			// player map is transparent
+			if(objMap.pixels[objOffset + 3] == 0) { continue; }
+			// room map is transparent
+			if(roomMap.pixels[roomOffset + 3] == 0) { continue; }
+
+			const rgb = ((roomMap.pixels[roomOffset] < 16) ? '0' : '') + roomMap.pixels[roomOffset].toString(16)
+				+ ((roomMap.pixels[roomOffset + 1] < 16) ? '0' : '') + roomMap.pixels[roomOffset + 1].toString(16)
+				+ ((roomMap.pixels[roomOffset + 2] < 16) ? '0' : '') + roomMap.pixels[roomOffset + 2].toString(16);
+			if(rgb in colors) { continue; }
+			if(rgb in colorToMessage) {
+				colors[rgb] = { roomX: roomX, roomY: roomY, objX: x, objY: y };
+			}
+		}
+	}
+	return colors;
+//	if((obj.dx != 0) || (obj.dy != 0)) { console.log('px,y ' + ox + ', ' + oy); }
+}
+
+
+
 /* Graphical helper functions */
+
+//https://medium.com/@michelfariarj/scale-a-pixi-js-game-to-fit-the-screen-1a32f8730e9c
+// Consider that WIDTH and HEIGHT are defined as the width and height of your unresized game in pixels.
+function resize (app, screen) {
+	return function () {
+		const WIDTH = screen.width + screen.x;
+		const HEIGHT = screen.height + screen.y;
+
+		const vpw = window.innerWidth - 16;  // Width of the viewport
+		const vph = window.innerHeight - 16; // Height of the viewport
+		let nvw; // New game width
+		let nvh; // New game height
+
+		// The aspect ratio is the ratio of the screen's sizes in different dimensions.
+		// The height-to-width aspect ratio of the game is HEIGHT / WIDTH.
+		
+		if (vph / vpw < HEIGHT / WIDTH) {
+			// If height-to-width ratio of the viewport is less than the height-to-width ratio
+			// of the game, then the height will be equal to the height of the viewport, and
+			// the width will be scaled.
+			nvh = vph;
+			nvw = (nvh * WIDTH) / HEIGHT;
+		} else {
+			// In the else case, the opposite is happening.
+			nvw = vpw;
+			nvh = (nvw * HEIGHT) / WIDTH;
+		}
+	
+		// Set the game screen size to the new values.
+		// This command only makes the screen bigger --- it does not scale the contents of the game.
+		// There will be a lot of extra room --- or missing room --- if we don't scale the stage.
+		app.renderer.resize(nvw, nvh);
+	
+		// This command scales the stage to fit the new size of the game.
+		app.stage.scale.set(nvw / WIDTH, nvh / HEIGHT);
+	};
+}
+
+
 
 function parseFrameName(name) {
 	const info = {};
@@ -51,7 +127,17 @@ function parseFrameName(name) {
 		.split(',')
 		.forEach(kv => {
 			const pair = kv.split(':');
-			info[pair[0]] = pair[1];
+			if(pair[0] in info) {
+				let v = info[pair[0]];
+				if (Array.isArray(v)) {
+					v.push(pair[1]);
+				} else {
+					v = [v, pair[1]];
+				}
+				info[pair[0]] = v;
+			} else {
+				info[pair[0]] = pair[1];
+			}
 		});
 	return info;
 }
@@ -140,40 +226,9 @@ function loadFromSheet(obj, objName, spritesheet) {
 
 
 
-function loadSpriteFromSheet(obj, spriteName, spritesheet) {
-	const animations = {};
-	Object.keys(spritesheet.textures)
-		.forEach(name => {
-			if(name.indexOf(spriteName + ' (') != 0) { return; }
-			const info = parseFrameName(name);
-			if('tag' in info) {
-				if(info.tag == 'map') {
-					const map = new PIXI.Sprite(spritesheet.textures[name]);
-					const mapName = ('map' in info) ? info.map : 'default';
-					obj.maps[mapName] = {
-						sprite: map,
-						pixels: getPixels(map),
-						x: map.anchor.x, y: map.anchor.y,
-						width: map.width, height: map.height
-					};
-					console.log(obj.maps[mapName].pixels);
-					console.log(map.anchor);
-				} else {
-					if (!(info.tag in animations)) {
-						animations[info.tag] = [];
-					}
-					animations[info.tag].push(spritesheet.textures[name]);
-				}
-			}
-			console.log(info);
-		});
-	collectAnimations(animations, obj);
-}
-
-
-
 function loadIconsFromSheet(obj, iconsName, spritesheet) {
 	const animations = {};
+	const attributes = {};
 	Object.keys(spritesheet.textures)
 		.forEach(name => {
 			if(name.indexOf(iconsName + ' (') != 0) { return; }
@@ -184,7 +239,9 @@ function loadIconsFromSheet(obj, iconsName, spritesheet) {
 					animations[info.tag] = [];
 				}
 				animations[info.tag].push(spritesheet.textures[name]);
+				attributes[info.tag] = info;
 			}
 		});
 	collectAnimations(animations, obj);
+	obj.iconAttributes = attributes;
 }

@@ -7,6 +7,7 @@
 </head>
 <body>
 	<script src="game.js"></script>
+	<script src="verbs.js"></script>
 	<script type="text/javascript">
 'use strict';
 /*
@@ -123,6 +124,7 @@ const app = new PIXI.Application(); //{ resizeTo: window });
 document.body.appendChild(app.view);
 
 
+
 const ColorMessages = {
 	'000000': function(p) {
 		console.log('STOP');
@@ -153,6 +155,180 @@ const ColorMessages = {
 	}
 }
 
+const GameObjects = {
+}
+
+function GameObject(name) {
+	this.name = name;
+	this.spritesheet = name;
+	GameObjects[name] = this;
+	this.nextState = '';
+	this.currentState = '';
+	this.states = {};
+	this.colorToMessage = ColorMessages;
+	this.x = 0;
+	this.y = 0;
+	this.dx = 0;
+	this.dy = 0;
+	this.carryable = true;
+	this.displayName = name;
+	this.displayState = '';
+
+	this.getDescription = function() {
+		return ('longDescription' in this) ? this.longDescription : '';
+	}
+
+	this.isCarryable = function(status) {
+		if(arguments.length > 0) { this.carryable = status; }
+		return this.carryable;
+	}
+	this.as = function (description) {
+		this.longDescription = description;
+		return this;
+	};
+	this.aka = function (name) {
+		this.displayName = name;
+		return this;
+	};
+	this.setXY = function(x, y) {
+		this.x = x;
+		this.y = y;
+		return this;
+	};
+	this.setState = function (state) {
+		this.nextState = state;
+		return this;
+	};
+
+	this.setLocation = function (room) {
+		this.currentRoom = room;
+	};
+
+	this.calculateState = function() { return this.nextState; }
+
+	this.removeDisplay = function(container) {
+		if(this.currentState in this.states) { 
+			const state = this.states[this.currentState];
+			Object.keys(state.layers)
+				.forEach(z => {
+					container.removeChild(state.layers[z]);
+				});
+			// container.removeChild(oldState.map.sprite);
+		}
+	};
+
+	this.display = function (container, refresh) {
+		let newState = this.calculateState();
+		if(refresh || (newState != this.currentState)) {
+			this.displayed = true;
+			const newStateObj = this.states[newState];
+			this.removeDisplay(container);
+			Object.keys(newStateObj.layers)
+				.forEach(z => {
+						console.log(z);
+						console.log(newStateObj);
+						newStateObj.layers[z].x = this.x;
+						newStateObj.layers[z].y = this.y;
+						newStateObj.layers[z].zIndex = parseInt(this.y) + parseInt(z);
+						newStateObj.layers[z].play();
+						container.addChild(newStateObj.layers[z]);
+				});
+			this.currentState = newState;
+		}
+
+		const state = this.states[this.currentState];
+		Object.keys(state.layers)
+			.forEach(z => {
+				state.layers[z].x = this.x;
+				state.layers[z].y = this.y;
+				state.layers[z].zIndex = parseInt(this.y) + parseInt(z);
+		});
+/*
+		state.map.sprite.alpha = 0.5;
+		state.map.sprite.x = this.x;
+		state.map.sprite.y = this.y;
+		state.map.sprite.zIndex = this.y + 1;
+		container.addChild(state.map.sprite);*/
+	};
+}
+
+function Player(name) {
+	GameObject.call(this, name);
+	this.inventory = new InventoryRoom(name + '.inventory');
+
+	this.isCarryable = function(status) { return false; }
+	this.stop = function (sender) {
+		console.log(this);
+		this.dx = 0;
+		this.dy = 0;
+		return true;
+	};
+	this.wade = function (sender) {
+		return false;
+	};
+	this.swim = function (sender) {
+		return false;
+	};
+	this.goWest = function (sender) {
+		console.log('west!');
+		this.dx = 0;
+		this.dy = 0;
+		console.log(this.currentRoom.connections);
+		if('west' in this.currentRoom.connections) {
+			const newRoom = Rooms[this.currentRoom.connections.west];
+			newRoom.moveTo(this, this.currentRoom, 'west', this.currentRoom.connections.west);
+		}
+		return true;
+	};
+	this.goNorth = function (sender) {
+		console.log('north!');
+		this.dx = 0;
+		this.dy = 0;
+		return true;
+	};
+	this.goEast =function (sender) {
+		console.log('east!');
+		this.dx = 0;
+		this.dy = 0;
+		console.log(this.currentRoom.connections);
+		if('east' in this.currentRoom.connections) {
+			const newRoom = Rooms[this.currentRoom.connections.east];
+			newRoom.moveTo(this, this.currentRoom, 'east', this.currentRoom.connections.east);
+		}
+		return true;
+	};
+	this.goSouth = function (sender) {
+		console.log('south!');
+		this.dx = 0;
+		this.dy = 0;
+		return true;
+	};
+
+	this.fallState = false;
+	this.fallCount = 0;
+	this.fall = function (sender) {
+		if(this.fallState) {
+			this.fallState = true;
+			this.fallCount = 0;
+		} else if (this.fallcount > 44) {
+			console.log('player fell too far.');
+		} else {
+			this.fallCount += 4;
+		}
+		this.dx = 0;
+		this.dy = 4;
+		return true;
+	};
+
+	this.calculateState = function() {
+		if((this.dx == 0) && (this.dy == 0)) {
+			return 'stand';
+		} else {
+			return 'walk';
+		}
+	};
+}
+
 
 const Rooms = {
 };
@@ -166,6 +342,10 @@ function Room(name) {
 	this.colorToMessage = ColorMessages;
 	this.connections = {};
 	this.contains = [];
+	this.removeList = [];
+
+	this.loadAssets = function() { return true; }
+
 	this.setAnimation = function(container) {
 		const state = this.states[this.currentState];
 		console.log(this);
@@ -174,26 +354,56 @@ function Room(name) {
 				state.layers[z].play();
 				container.addChild(state.layers[z]);
 			});
-		this.contains.forEach(obj => obj.display(container));
+		this.contains.forEach(obj => obj.display(container, true));
 	};
 
-	this.moveTo = function (obj, travelling, roomName) {
-		const objMap = obj.maps[obj.currentMap];
+	this.updateAnimations = function(container) {
+		this.removeList.forEach(obj => obj.removeDisplay(container));
+		this.contains.forEach(obj => obj.display(container, false));
+	};
+
+	this.removeObject = function(obj) {
+		this.removeList.push(obj);
+		const idx = this.contains.lastIndexOf(obj);
+		if(idx >= 0) {
+			this.contains.splice(idx, 1);
+		}
+	}
+
+	/**
+		@param obj Object to move.
+		@param currentRoom The room (object) the object is in.
+		@param travelling The string name of the "direction" the object is travelling in.
+		@param roomName The string name of the destination room the object is being moved into.
+	*/
+	this.moveTo = function (obj, currentRoom, travelling, roomName) {
+		console.log(currentRoom);
+		currentRoom.removeObject(obj);
+		const objMap = obj.states[obj.currentState].map;
 		const roomMap = this.states[this.currentState].map;
 		console.log(objMap);
 		console.log(roomMap);
 		const xCenter = Math.floor(objMap.width * objMap.x);
 		const yCenter = Math.floor(objMap.height * objMap.y);
-		if(travelling == 'east') {
-			obj.x = (objMap.width - xCenter) + 2;
-			obj.y = (roomMap.height  - 6) - (objMap.height - yCenter);
-		} else if (travelling == 'west') {
-			obj.x = (roomMap.width - 2) - (objMap.width - xCenter);
-			obj.y = (roomMap.height  - 6) - (objMap.height - yCenter);
+		switch (travelling) {
+			case 'east':
+				obj.x = (objMap.width - xCenter) + 2;
+				obj.y = (roomMap.height  - 6) - (objMap.height - yCenter);
+				break;
+			case 'west':
+				obj.x = (roomMap.width - 2) - (objMap.width - xCenter);
+				obj.y = (roomMap.height  - 6) - (objMap.height - yCenter);
+				break;
+			case 'north':
+				break;
+			case 'south':
+				break;
+			default:
 		}
 		console.log(obj);
 		console.log('new x y ' + obj.x + ', ' + obj.y);
-		obj.currentRoom = this;
+		this.contains.push(obj);
+		obj.setLocation(this);
 	};
 
 	this.as = function (description) {
@@ -221,294 +431,40 @@ function Room(name) {
 	this.having = function (gameObj) {
 		gameObj.setLocation(this);
 		this.contains.push(gameObj);
-	};
-}
-
-const GameObjects = {
-}
-
-function GameObject(name) {
-	this.name = name;
-	this.spritesheet = name;
-	GameObjects[name] = this;
-	this.currentState = '';
-	this.states = {};
-	this.colorToMessage = ColorMessages;
-	this.x = 0;
-	this.y = 0;
-	this.dx = 0;
-	this.dy = 0;
-	this.displayName = name;
-	this.displayState = '';
-
-	this.getDescription = function() {
-		return ('longDescription' in this) ? this.longDescription : '';
-	}
-
-	this.as = function (description) {
-		this.longDescription = description;
 		return this;
 	};
-	this.aka = function (name) {
-		this.displayName = name;
-		return this;
-	};
-	this.setXY = function(x, y) {
-		this.x = x;
-		this.y = y;
-		return this;
-	};
-	this.setState = function (state) {
-		this.currentState = state;
-		return this;
-	};
-
-	this.setLocation = function (room) {
-		this.currentLocation = room;
-	};
-
-	this.display = function (container) {
-		const state = this.states[this.currentState];
-		console.log(this);
-		Object.keys(state.layers)
-			.forEach(z => {
-				state.layers[z].x = this.x;
-				state.layers[z].y = this.y;
-				state.layers[z].zIndex = parseInt(this.y) + parseInt(z);
-				state.layers[z].play();
-				container.addChild(state.layers[z]);
-			});
-/*		state.map.sprite.x = this.x;
-		state.map.sprite.y = this.y;
-		state.map.sprite.zIndex = this.y + 1;
-		container.addChild(state.map.sprite);*/
-	};
 }
 
-new Room('room0')
-	.as('A large field with a boulder, tree, and pond.')
-	.with({ east: 'room1' })
-	.having((new GameObject('chest')).setXY(590, 185).setState('closed'));
-Rooms.room0.currentState = 'day';
-new Room('room1')
-	.as('The foothills of a mountain with a large sinkhole nearby.')
-	.with({ west: 'room0' })
-	.having((new GameObject('key')).setXY(77, 247));
+function ContainerRoom(name) {
+	Room.call(this, name);
 
+	this.priorRoom = [];
 
-const player = {
-	currentRoom: Rooms.room0,
-	x: 110, y: 318,
-	dx: 0, dy: 0,
-	animState: '',
-	currentMap: 'default',
-	animations: {},
-	maps: {},
-	stop: function (sender) {
-		console.log(this);
-		this.dx = 0;
-		this.dy = 0;
-		return true;
-	},
-	wade: function (sender) {
-		return false;
-	},
-	swim: function (sender) {
-		return false;
-	},
-	goWest: function (sender) {
-		console.log('west!');
-		this.dx = 0;
-		this.dy = 0;
-		console.log(this.currentRoom.connections);
-		if('west' in this.currentRoom.connections) {
-			const newRoom = Rooms[this.currentRoom.connections.west];
-			newRoom.moveTo(this, 'west', this.currentRoom.connections.west);
-		}
-		return true;
-	},
-	goNorth: function (sender) {
-		console.log('north!');
-		this.dx = 0;
-		this.dy = 0;
-		return true;
-	},
-	goEast: function (sender) {
-		console.log('east!');
-		this.dx = 0;
-		this.dy = 0;
-		console.log(this.currentRoom.connections);
-		if('east' in this.currentRoom.connections) {
-			const newRoom = Rooms[this.currentRoom.connections.east];
-			newRoom.moveTo(this, 'east', this.currentRoom.connections.east);
-		}
-		return true;
-	},
-	goSouth: function (sender) {
-		console.log('south!');
-		this.dx = 0;
-		this.dy = 0;
-		return true;
-	},
-	fallState: false,
-	fallCount: 0,
-	fall: function (sender) {
-		if(this.fallState) {
-			this.fallState = true;
-			this.fallCount = 0;
-		} else if (this.fallcount > 44) {
-			console.log('player fell too far.');
-		} else {
-			this.fallCount += 4;
-		}
-		this.dx = 0;
-		this.dy = 4;
-		return true;
-	},
+	this.moveTo = function (obj, currentRoom, travelling, roomName) {
+		currentRoom.removeObject(obj);
+		this.priorRoom.push({ obj: obj, x: obj.x, y: obj.y, room: currentRoom });
 
-	setAnimation: function(container) {
-		let newAnim = this.animState;
-		if((this.dx == 0) && (this.dy == 0)) {
-			newAnim = 'stand';
-		} else {
-			newAnim = 'walk';
-		}
-		if(newAnim != this.animState) {
-			container.removeChild(this.animations[this.animState]);
-			this.animState = newAnim;
-			this.animations[this.animState].x = this.x;
-			this.animations[this.animState].y = this.y;
-			this.animations[this.animState].zIndex = this.y;
-			this.animations[this.animState].play();
-			container.addChild(this.animations[this.animState]);
-/*
-			this.maps.default.sprite.x = this.x;
-			this.maps.default.sprite.y = this.y;
-			this.maps.default.sprite.zIndex = this.y + 1;
-			container.addChild(this.maps.default.sprite);*/
-		}
-	},
-
-	updateAnimation: function() {
-		this.animations[this.animState].x = this.x;
-		this.animations[this.animState].y = this.y;
-		this.animations[this.animState].zIndex = this.y;
-/*
-		this.maps.default.sprite.x = this.x;
-		this.maps.default.sprite.y = this.y;
-		this.maps.default.sprite.zIndex = this.y + 1;*/
 	}
-};
-
-
-function collide(objMap, ox, oy, colorToMessage, roomMap) {
-	const colors = {};
-	const roomAnchorX = Math.floor(roomMap.width * roomMap.x);
-	const roomAnchorY = Math.floor(roomMap.height * roomMap.y);
-	for(let x = 0; x < objMap.width; x++) {
-		const roomX = (ox + x) - Math.floor(objMap.width * objMap.x) + roomAnchorX;
-		if((roomX < 0) || (roomX >= roomMap.width)) { continue; }
-		for(let y = 0; y < objMap.height; y++) {
-			const roomY = (oy + y) - Math.floor(objMap.height * objMap.y) + roomAnchorY;
-			if((roomY < 0) || (roomY >= roomMap.height)) { continue; }
-			const objOffset = (x + (y * objMap.width)) * 4;
-			const roomOffset = (roomX + (roomY * roomMap.width)) * 4;
-
-			// out of bounds on room
-			if((roomOffset < 0) || (roomOffset > (roomMap.pixels.length - 4))) { continue; }
-			// player map is transparent
-			if(objMap.pixels[objOffset + 3] == 0) { continue; }
-			// room map is transparent
-			if(roomMap.pixels[roomOffset + 3] == 0) { continue; }
-
-			const rgb = ((roomMap.pixels[roomOffset] < 16) ? '0' : '') + roomMap.pixels[roomOffset].toString(16)
-				+ ((roomMap.pixels[roomOffset + 1] < 16) ? '0' : '') + roomMap.pixels[roomOffset + 1].toString(16)
-				+ ((roomMap.pixels[roomOffset + 2] < 16) ? '0' : '') + roomMap.pixels[roomOffset + 2].toString(16);
-			if(rgb in colors) { continue; }
-			if(rgb in colorToMessage) {
-				colors[rgb] = { roomX: roomX, roomY: roomY, objX: x, objY: y };
-			}
-		}
-	}
-	return colors;
-//	if((obj.dx != 0) || (obj.dy != 0)) { console.log('px,y ' + ox + ', ' + oy); }
 }
 
-const Verbs = {
-};
+function InventoryRoom(name) {
+	Room.call(this, name);
 
-function Verb(verb) {
-	this.name = verb
-	Verbs[verb] = this;
-	this.available = true;
-
-	this.activate = function () {
-		console.log('on');
-	};
-
-	this.deactivate = function () {
-		console.log('off');
-	};
-
-	this.target = function (x, y) {
-		return false;
-	};
+	this.loadAssets = function() { return false; }
+	this.moveTo = function (obj, currentRoom, travelling, roomName) {
+		console.log(currentRoom);
+		currentRoom.removeObject(obj);
+		this.contains.push(obj);
+		obj.setLocation(this);
+		console.log(this.contains);
+	}
 }
 
-
-
-
-const verbColors = {
-	'6abe30': function(p) {
-		console.log('VERB');
-	}
-};
-
-const pixelMap = {
-	pixels: [ 0,0,0,255 ],
-	x: 0, y: 0, width: 1, height: 1
-};
-
-const look = new Verb('look');
-look.target = function (x,y) {
-	console.log('look ' + x + ', ' + y);
-	let flag = false;
-	const room = player.currentRoom;
-	console.log(room);
-	room.contains.forEach(gameObj => {
-		if(flag) { return; }
-		console.log(gameObj);
-		const state = gameObj.states[gameObj.currentState];
-		if('look' in state.maps) {
-			console.log('look map available');
-			Object.keys(collide(pixelMap, x - gameObj.x, y - gameObj.y, verbColors, state.maps.look))
-				.forEach(rgb => {
-					flag = true;
-					console.log(gameObj.getDescription());
-				});
-		} else {
-			console.log('no look map');
-		}
-	});
-	if(!flag) {
-		console.log(room.getDescription());
-	}
-	return false;
-};
-new Verb('walk');
-new Verb('take');
-new Verb('inventory');
-
-/*
-				currentRoom.contains.forEach(gameObj => {
-					collide(player, player.x - gameObj.x, player.y - gameObj.y, 
-						player.dx, player.dy, gameObj);
-				});
-*/
 
 const uiChrome = {
 	icons: new PIXI.Container(),
 	animations: {},
+	attributes: {},
 	verbs: {},
 	verbList: [],
 	width: 0,
@@ -560,15 +516,18 @@ const uiChrome = {
 						this.icons.removeChild(currentGraphics);
 						Verbs[currentVerb].deactivate();
 					}
-					const graphics = new PIXI.Graphics();
-					graphics.beginFill(0xfbf236, 0.5);
-					graphics.lineStyle(1, 0xfbf236, 0.8);
-					graphics.drawRect(0, 0, anim.width, anim.height);
-					graphics.x = anim.x;
-					this.icons.addChild(graphics);
-					currentVerb = verb;
-					currentGraphics = graphics;
-					Verbs[verb].activate();
+					if(Verbs[verb].activate()) {
+						const graphics = new PIXI.Graphics();
+						graphics.beginFill(0xfbf236, 0.5);
+						graphics.lineStyle(1, 0xfbf236, 0.8);
+						graphics.drawRect(0, 0, anim.width, anim.height);
+						graphics.x = anim.x;
+						this.icons.addChild(graphics);
+						currentVerb = verb;
+						currentGraphics = graphics;
+					} else {
+						currentVerb = '';
+					}
 				} else {
 					if(currentVerb != '') {
 						this.icons.removeChild(currentGraphics);
@@ -582,48 +541,28 @@ const uiChrome = {
 	}
 };
 
-const screen = new PIXI.Container();
-//https://medium.com/@michelfariarj/scale-a-pixi-js-game-to-fit-the-screen-1a32f8730e9c
-// Consider that WIDTH and HEIGHT are defined as the width and height of your unresized game in pixels.
-function resize () {
-	const WIDTH = screen.width + screen.x;
-	const HEIGHT = screen.height + screen.y;
+const GameState = new GameData();
 
-		const vpw = window.innerWidth - 16;  // Width of the viewport
-		const vph = window.innerHeight - 16; // Height of the viewport
-		let nvw; // New game width
-		let nvh; // New game height
+/* Actual "game" description. */
+const player = new Player('player').setXY(110, 316);
+makeVerbs(player);
 
-		// The aspect ratio is the ratio of the screen's sizes in different dimensions.
-		// The height-to-width aspect ratio of the game is HEIGHT / WIDTH.
-		
-		if (vph / vpw < HEIGHT / WIDTH) {
-			// If height-to-width ratio of the viewport is less than the height-to-width ratio
-			// of the game, then the height will be equal to the height of the viewport, and
-			// the width will be scaled.
-			nvh = vph;
-			nvw = (nvh * WIDTH) / HEIGHT;
-		} else {
-			// In the else case, the opposite is happening.
-			nvw = vpw;
-			nvh = (nvw * HEIGHT) / WIDTH;
-		}
-    
-		// Set the game screen size to the new values.
-		// This command only makes the screen bigger --- it does not scale the contents of the game.
-		// There will be a lot of extra room --- or missing room --- if we don't scale the stage.
-		app.renderer.resize(nvw, nvh);
-    
-		// This command scales the stage to fit the new size of the game.
-		app.stage.scale.set(nvw / WIDTH, nvh / HEIGHT);
-}
+new Room('room0')
+	.as('A large field with a boulder, tree, and pond.')
+	.with({ east: 'room1' })
+	.having((new GameObject('chest')).setXY(590, 185).setState('closed'))
+	.having(player);
+Rooms.room0.currentState = 'day';
+new Room('room1')
+	.as('The foothills of a mountain with a large sinkhole nearby.')
+	.with({ west: 'room0' })
+	.having((new GameObject('key')).setXY(77, 247));
 
-// Add event listener so that our resize function runs every time the
-// browser window is resized.
-window.addEventListener("resize", resize);
 
+
+/* Game start up code */
 app.loader
-	.add("sprite-test-v2.json")
+	.add("player.json")
 	.add("room0.json")
 	.add("room1.json")
 	.add("chest.json")
@@ -631,6 +570,13 @@ app.loader
 	.add("icons.json")
 	.load(
 		(loader, resources) => {
+			const screen = new PIXI.Container();
+			const resizer = resize(app, screen);
+
+			// Add event listener so that our resize function runs every time the
+			// browser window is resized.
+			window.addEventListener("resize", resizer);
+
 			screen.sortableChildren = true;
 			app.stage.addChild(uiChrome.icons);
 			app.stage.addChild(screen);
@@ -641,6 +587,7 @@ app.loader
 
 			Object.keys(Rooms)
 				.forEach(name => {
+					if(!Rooms[name].loadAssets()) { return; }
 					loadFromSheet(Rooms[name],
 						Rooms[name].spritesheet,
 						resources[Rooms[name].spritesheet + '.json'].spritesheet)
@@ -651,43 +598,35 @@ app.loader
 					loadFromSheet(GameObjects[name],
 						GameObjects[name].spritesheet,
 						resources[GameObjects[name].spritesheet + '.json'].spritesheet)
-					console.log(GameObject[name]);
+					console.log(GameObjects[name]);
 				});
 
-			loadSpriteFromSheet(player, 'sprite-test-v2', resources["sprite-test-v2.json"].spritesheet);
-
-
-			player.currentRoom = Rooms.room0;
 			let currentRoom = player.currentRoom;
 			currentRoom.setAnimation(screen);
-			console.log('here1');
-			player.setAnimation(screen);
-			console.log('here2');
 			inputHandlers(player, screen);
 
-
-			resize();
+			resizer();
 			// Listen for frame updates
 			app.ticker.add(() => {
-				Object.keys(collide(player.maps[player.currentMap], player.x + player.dx, player.y + player.dy, currentRoom.colorToMessage,
+				Object.keys(collide(player.states[player.currentState].map, player.x + player.dx, player.y + player.dy, currentRoom.colorToMessage,
 						currentRoom.states[currentRoom.currentState].map))
 					.forEach(rgb => currentRoom.colorToMessage[rgb](player));
-				currentRoom.contains.forEach(gameObj => {
-					Object.keys(collide(player.maps[player.currentMap], player.x + player.dx - gameObj.x, player.y + player.dy - gameObj.y, 
-							gameObj.colorToMessage, gameObj.states[gameObj.currentState].map))
-						.forEach(rgb => gameObj.colorToMessage[rgb](player));
+				currentRoom.contains.forEach(obj => {
+					if(obj == player) { return; }
+					Object.keys(collide(player.states[player.currentState].map, player.x + player.dx - obj.x, player.y + player.dy - obj.y, 
+							obj.colorToMessage, obj.states[obj.currentState].map))
+						.forEach(rgb => obj.colorToMessage[rgb](player));
 				});
 				player.x += player.dx;
 				player.y += player.dy;
-				player.updateAnimation();
 
 				if(currentRoom != player.currentRoom) {
 					screen.removeChildren();
 					player.currentRoom.setAnimation(screen);
-					resize();
+					resizer();
 				}
 				currentRoom = player.currentRoom;
-				player.setAnimation(screen);
+				currentRoom.updateAnimations(screen);
 			});
 		}
 	);
