@@ -7,6 +7,7 @@
 </head>
 <body>
 	<script src="game.js"></script>
+	<script src="pathfind.js"></script>
 	<script src="verbs.js"></script>
 	<script type="text/javascript">
 'use strict';
@@ -44,27 +45,38 @@ aseprite -b --filename-format "{title} (tag:{tag},frame:{frame},{layer})" icons.
 
 https://ihatetomatoes.net/how-to-work-with-images-and-pixi-js/
 
+http://scottmcdonnell.github.io/pixi-examples/index.html?s=basics&f=text.js&title=Text
+https://www.html5gamedevs.com/topic/9668-pixi-input-elements/
+https://stackoverflow.com/questions/42111003/how-to-add-an-input-textbox-in-pixijs
+https://pixijs.download/dev/docs/PIXI.Text.html
+https://pixijs.io/pixi-text-style/#
+https://stackoverflow.com/questions/46218500/pixijs-load-custom-font
+https://www.html5gamedevs.com/topic/8659-about-fonts/
 */
 
 // http://scottmcdonnell.github.io/pixi-examples/index.html?s=demos&f=interactivity.js&title=Interactivity
 function inputHandlers(player, screen) {
 	function mvLeft() {
 		console.log('left');
+		player.path = [];
 		player.dx = (player.dx < 0) ? 0 : -2;
 		player.dy = 0;
 	}
 	function mvRight() {
 		console.log('right');
+		player.path = [];
 		player.dx = (player.dx > 0) ? 0 : 2;
 		player.dy = 0;
 	}
 	function mvUp() {
 		console.log('up');
+		player.path = [];
 		player.dx = 0;
 		player.dy = (player.dy < 0) ? 0 : -2;
 	}
 	function mvDown() {
 		console.log('down');
+		player.path = [];
 		player.dx = 0;
 		player.dy = (player.dy > 0) ? 0 : 2;
 	}
@@ -81,37 +93,6 @@ function inputHandlers(player, screen) {
 		// down
 		if(evt.keyCode == 40) { mvDown(); }
 	});
-
-/*
-	function no_op() {}
-
-	screen.interactive = true;
-	screen
-		// set the mousedown and touchstart callback...
-		.on('mousedown', no_op)
-		.on('touchstart', no_op)
-
-		// set the mouseup and touchend callback...
-		.on('mouseup', no_op)
-		.on('touchend', no_op)
-		.on('mouseupoutside', no_op)
-		.on('touchendoutside', no_op)
-
-		// set the mouseover callback...
-		.on('mouseover', no_op)
-
-		// set the mouseout callback...
-		.on('mouseout', no_op)
-		// you can also listen to click and tap events :
-		.on('click', event => {
-			console.log('click');
-			console.log(event);
-			const p = event.data.getLocalPosition(screen);
-			console.log(p);
-		})
-		.on('pointertap', event => {
-		});
-*/
 }
 
 // The application will create a renderer using WebGL, if possible,
@@ -220,13 +201,12 @@ function GameObject(name) {
 	this.display = function (container, refresh) {
 		let newState = this.calculateState();
 		if(refresh || (newState != this.currentState)) {
-			this.displayed = true;
 			const newStateObj = this.states[newState];
 			this.removeDisplay(container);
 			Object.keys(newStateObj.layers)
 				.forEach(z => {
-						console.log(z);
-						console.log(newStateObj);
+//						console.log(z);
+//						console.log(newStateObj);
 						newStateObj.layers[z].x = this.x;
 						newStateObj.layers[z].y = this.y;
 						newStateObj.layers[z].zIndex = parseInt(this.y) + parseInt(z);
@@ -255,10 +235,26 @@ function GameObject(name) {
 function Player(name) {
 	GameObject.call(this, name);
 	this.inventory = new InventoryRoom(name + '.inventory');
+	this.path = [];
+
+	this.turn = function() {
+		this.x += this.dx;
+		this.y += this.dy;
+		if(this.path.length > 1) {
+			const pt = this.path.shift();
+			this.dx = pt.x - this.x;
+			this.dy = pt.y - this.y;
+		} else if(this.path.length == 1) {
+			this.path = [];
+			this.dx = 0;
+			this.dy = 0;
+		}
+	};
 
 	this.isCarryable = function(status) { return false; }
 	this.stop = function (sender) {
 		console.log(this);
+		this.path = [];
 		this.dx = 0;
 		this.dy = 0;
 		return true;
@@ -271,6 +267,7 @@ function Player(name) {
 	};
 	this.goWest = function (sender) {
 		console.log('west!');
+		this.path = [];
 		this.dx = 0;
 		this.dy = 0;
 		console.log(this.currentRoom.connections);
@@ -282,12 +279,14 @@ function Player(name) {
 	};
 	this.goNorth = function (sender) {
 		console.log('north!');
+		this.path = [];
 		this.dx = 0;
 		this.dy = 0;
 		return true;
 	};
 	this.goEast =function (sender) {
 		console.log('east!');
+		this.path = [];
 		this.dx = 0;
 		this.dy = 0;
 		console.log(this.currentRoom.connections);
@@ -299,6 +298,7 @@ function Player(name) {
 	};
 	this.goSouth = function (sender) {
 		console.log('south!');
+		this.path = [];
 		this.dx = 0;
 		this.dy = 0;
 		return true;
@@ -354,12 +354,14 @@ function Room(name) {
 				state.layers[z].play();
 				container.addChild(state.layers[z]);
 			});
+		//console.log('setting up room');
 		this.contains.forEach(obj => obj.display(container, true));
 	};
 
 	this.updateAnimations = function(container) {
+		//console.log('updating room');
 		this.removeList.forEach(obj => obj.removeDisplay(container));
-		this.contains.forEach(obj => obj.display(container, false));
+		this.contains.forEach(obj => obj.display(container, true));
 	};
 
 	this.removeObject = function(obj) {
@@ -460,86 +462,113 @@ function InventoryRoom(name) {
 	}
 }
 
+function UIChrome() {
+	const verbs = {};
+	const verbList = [];
 
-const uiChrome = {
-	icons: new PIXI.Container(),
-	animations: {},
-	attributes: {},
-	verbs: {},
-	verbList: [],
-	width: 0,
-	height: 0,
-	addVerb: function (verb) {
-		if(!(verb in this.verbs)) {
-			this.verbList.push(verb);
-			if(verb in Verbs) { this.verbs[verb] = Verbs[verb]; }
+	this.icons = new PIXI.Container();
+	this.animations = {};
+	this.attributes = {};
+	this.width = 0;
+	this.height = 0;
+
+	let currentVerb = '';
+	let currentGraphics = {};
+
+	this.addVerb = function (verb) {
+		if(!(verb in verbs)) {
+			verbList.push(verb);
+			if(verb in Verbs) {
+				verbs[verb] = Verbs[verb]; 
+			}
 		}
-	},
-	display: function (screen) {
-		let currentVerb = '';
-		let currentGraphics = {};
+	};
 
-		const that = this;
+	this.screenHit = function(screen) {
+		return event => {
+			console.log('click');
+			console.log(event);
+			const p = event.data.getLocalPosition(screen);
+			console.log(p);
+			const hitX = Math.floor(p.x);
+			const hitY = Math.floor(p.y);
+			if (currentVerb != '') {
+				if(!Verbs[currentVerb].target(hitX, hitY)) {
+					currentVerb = '';
+					this.icons.removeChild(currentGraphics);
+				}
+			} else {
+				Verbs[''].target(hitX, hitY);
+			}
+		};
+	};
+
+	const iconHighlight = function(anim) {
+		const graphics = new PIXI.Graphics();
+		graphics.beginFill(0xfbf236, 0.5);
+		graphics.lineStyle(1, 0xfbf236, 0.8);
+		graphics.drawRect(0, 0, anim.width, anim.height);
+		graphics.x = anim.x;
+		return graphics;
+	};
+
+	this.verbHit = function (verb, anim) {
+		return evt => {
+			console.log(evt);
+			if(verb != currentVerb) {
+				if(currentVerb != '') {
+					this.icons.removeChild(currentGraphics);
+					Verbs[currentVerb].deactivate();
+				}
+				if(Verbs[verb].activate()) {
+					const graphics = iconHighlight(anim);
+					console.log(graphics);
+					console.log(anim);
+					this.icons.addChild(graphics);
+					currentVerb = verb;
+					currentGraphics = graphics;
+				} else {
+					currentVerb = '';
+				}
+			} else {
+				if(currentVerb != '') {
+					this.icons.removeChild(currentGraphics);
+					currentVerb = '';
+					Verbs[verb].deactivate();
+				}
+			}
+			console.log(verb);
+		};
+	};
+
+	this.verbDisplay = function (verb) {
+		if(!Verbs[verb].available) { return; }
+		const anim = this.animations[verb];
+		anim.interactive = true;
+		this.icons.addChild(anim);
+		anim.play();
+		anim.x = this.width + 1;
+		this.width = anim.x + anim.width;
+		this.height = Math.max(this.height, anim.height);
+		console.log(verb + ', anim extents: ' + anim.width + ', ' + anim.height);
+		const verbHandler = this.verbHit(verb, anim);
+		anim
+//			.on('click', verbHandler)
+			.on('pointertap', verbHandler);
+	};
+
+	this.display = function (screen) {
+
 		screen.interactive = true;
 		screen
-			.on('click', event => {
-				console.log('click');
-				console.log(event);
-				const p = event.data.getLocalPosition(screen);
-				console.log(p);
-				if (currentVerb != '') {
-					const hitX = Math.floor(p.x);
-					const hitY = Math.floor(p.y);
-					if(!Verbs[currentVerb].target(hitX, hitY)) {
-						currentVerb = '';
-						that.icons.removeChild(currentGraphics);
-					}
-				}
-			})
-			.on('pointertap', event => {
-			});
+			.on('pointertap', this.screenHit(screen));
 
 		this.icons.interactive = true;
-		this.verbList.forEach(verb => {
-			if(!Verbs[verb].available) { return; }
-			const anim = this.animations[verb];
-			anim.interactive = true;
-			this.icons.addChild(anim);
-			anim.play();
-			anim.x = this.width + 1;
-			this.width = anim.x + anim.width;
-			this.height = Math.max(this.height, anim.height);
-			console.log(verb + ', anim extents: ' + anim.width + ', ' + anim.height);
-			anim.on('click', evt => {
-				if(verb != currentVerb) {
-					if(currentVerb != '') {
-						this.icons.removeChild(currentGraphics);
-						Verbs[currentVerb].deactivate();
-					}
-					if(Verbs[verb].activate()) {
-						const graphics = new PIXI.Graphics();
-						graphics.beginFill(0xfbf236, 0.5);
-						graphics.lineStyle(1, 0xfbf236, 0.8);
-						graphics.drawRect(0, 0, anim.width, anim.height);
-						graphics.x = anim.x;
-						this.icons.addChild(graphics);
-						currentVerb = verb;
-						currentGraphics = graphics;
-					} else {
-						currentVerb = '';
-					}
-				} else {
-					if(currentVerb != '') {
-						this.icons.removeChild(currentGraphics);
-						currentVerb = '';
-						Verbs[verb].deactivate();
-					}
-				}
-				console.log(verb); 
-			});
-		});
-	}
-};
+		verbList.forEach(verb => this.verbDisplay(verb));
+	};
+}
+
+const uiChrome = new UIChrome();
 
 const GameState = new GameData();
 
@@ -617,8 +646,7 @@ app.loader
 							obj.colorToMessage, obj.states[obj.currentState].map))
 						.forEach(rgb => obj.colorToMessage[rgb](player));
 				});
-				player.x += player.dx;
-				player.y += player.dy;
+				player.turn();
 
 				if(currentRoom != player.currentRoom) {
 					screen.removeChildren();
