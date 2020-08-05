@@ -1,9 +1,6 @@
 'use strict';
 
-const Verbs = {
-};
-
-function Verb(verb, actor) {
+function Verb(verb, actor, Verbs) {
 	this.actor = actor;
 	this.name = verb
 	Verbs[verb] = this;
@@ -39,8 +36,8 @@ const pixelMap = {
 };
 
 
-function VerbLook(actor) {
-	Verb.call(this, 'look', actor);
+function VerbLook(actor, Verbs) {
+	Verb.call(this, 'look', actor, Verbs);
 
 	this.target = function (x,y) {
 		console.log('look ' + x + ', ' + y);
@@ -69,8 +66,8 @@ function VerbLook(actor) {
 	};
 }
 
-function VerbWalk(actor) {
-	Verb.call(this, 'walk', actor);
+function VerbWalk(actor, Verbs) {
+	Verb.call(this, 'walk', actor, Verbs);
 
 	this.target = function (x,y) {
 		console.log('walk ' + x + ', ' + y);
@@ -86,8 +83,8 @@ function VerbWalk(actor) {
 	};
 }
 
-function VerbTake(actor) {
-	Verb.call(this, 'take', actor);
+function VerbTake(actor, Verbs) {
+	Verb.call(this, 'take', actor, Verbs);
 	this.target = function (x,y) {
 		console.log('take ' + x + ', ' + y);
 		const room = this.actor.currentRoom;
@@ -120,12 +117,12 @@ function VerbTake(actor) {
 	};
 }
 
-function VerbOpen(actor) {
-	Verb.call(this, 'open', actor);
+function VerbOpen(actor, Verbs) {
+	Verb.call(this, 'open', actor, Verbs);
 }
 
-function VerbInventory(actor) {
-	Verb.call(this, 'inventory', actor);
+function VerbInventory(actor, Verbs) {
+	Verb.call(this, 'inventory', actor, Verbs);
 	this.activate = function () {
 		console.log('on');
 		actor.inventory.contains.forEach(obj => {
@@ -135,8 +132,8 @@ function VerbInventory(actor) {
 	};
 }
 
-function VerbDefault(actor) {
-	Verb.call(this, '', actor);
+function VerbDefault(actor, Verbs) {
+	Verb.call(this, '', actor, Verbs);
 	this.target = function (x,y) {
 		console.log('Default verb');
 		let dx = x - actor.x;
@@ -172,11 +169,58 @@ function VerbDefault(actor) {
 	};
 }
 
-function makeVerbs(actor) {
-	new VerbLook(actor);
-	new VerbWalk(actor);
-	new VerbTake(actor);
-	new VerbOpen(actor);
-	new VerbInventory(actor);
-	new VerbDefault(actor);
+function KeyboardLeft(actor, Verbs) {
+	Verb.call(this, 'keyboard-left', actor, Verbs);
+	this.activate = function () {
+		console.log('left');
+		actor.path = [];
+		actor.dx = (actor.dx < 0) ? 0 : -2;
+		actor.dy = 0;
+	};
+}
+
+function KeyboardRight(actor, Verbs) {
+	Verb.call(this, 'keyboard-right', actor, Verbs);
+	this.activate = function () {
+		console.log('right');
+		actor.path = [];
+		actor.dx = (actor.dx > 0) ? 0 : 2;
+		actor.dy = 0;
+	};
+}
+
+function KeyboardUp(actor, Verbs) {
+	Verb.call(this, 'keyboard-up', actor, Verbs);
+	this.activate = function () {
+		console.log('up');
+		actor.path = [];
+		actor.dx = 0;
+		actor.dy = (actor.dy < 0) ? 0 : -2;
+	};
+}
+
+function KeyboardDown(actor, Verbs) {
+	Verb.call(this, 'keyboard-down', actor, Verbs);
+	this.activate = function () {
+		console.log('up');
+		actor.path = [];
+		actor.dx = 0;
+		actor.dy = (actor.dy > 0) ? 0 : 2;
+	};
+}
+
+function makeVerbs(actor, Verbs) {
+	if (arguments.length < 2) { Verbs = {}; }
+	new VerbLook(actor, Verbs);
+	//new VerbWalk(actor, Verbs);
+	new VerbTake(actor, Verbs);
+	new VerbOpen(actor, Verbs);
+	new VerbInventory(actor, Verbs);
+	new VerbDefault(actor, Verbs);
+
+	new KeyboardLeft(actor, Verbs);
+	new KeyboardRight(actor, Verbs);
+	new KeyboardUp(actor, Verbs);
+	new KeyboardDown(actor, Verbs);
+	return Verbs;
 }

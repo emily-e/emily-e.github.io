@@ -1,10 +1,7 @@
 'use strict';
 
 
-
-
-
-/*
+/**
 	This is a collection of values that can be serialized as JSON objects that are "global" game state flags.
 	When saving the game this will be dumped.
 	When loading the game this will be restored.
@@ -30,6 +27,7 @@ function GameData() {
 	this.watch = function(key, actor) {
 		if (!(key in watchers)) { watchers[key] = []; }
 		if(watchers[key].lastIndexOf(actor) == -1) { watchers[key].push(actor); }
+		return this.get(key);
 	};
 	this.unwatch = function(key, actor) {
 		if (!(key in watchers)) { return; }
@@ -41,6 +39,126 @@ function GameData() {
 	this.values = function() { return JSON.stringify(values); };
 };
 
+
+
+function UIChrome(Verbs) {
+	const verbList = [];
+
+	this.icons = new PIXI.Container();
+	this.animations = {};
+	this.attributes = {};
+	this.width = 0;
+	this.height = 0;
+
+	let currentVerb = '';
+	let currentGraphics = {};
+
+	this.addVerb = function (verb) {
+		verbList.push(verb);
+	};
+
+	this.screenHit = function(screen) {
+		return event => {
+			console.log('click');
+			console.log(event);
+			const p = event.data.getLocalPosition(screen);
+			console.log(p);
+			const hitX = Math.floor(p.x);
+			const hitY = Math.floor(p.y);
+			if (currentVerb != '') {
+				if(!Verbs[currentVerb].target(hitX, hitY)) {
+					currentVerb = '';
+					this.icons.removeChild(currentGraphics);
+				}
+			} else {
+				Verbs[''].target(hitX, hitY);
+			}
+		};
+	};
+
+	const iconHighlight = function(anim) {
+		const graphics = new PIXI.Graphics();
+		graphics.beginFill(0xfbf236, 0.5);
+		graphics.lineStyle(1, 0xfbf236, 0.8);
+		graphics.drawRect(0, 0, anim.width, anim.height);
+		graphics.x = anim.x;
+		return graphics;
+	};
+
+	this.verbHit = function (verb, anim) {
+		return evt => {
+			console.log(evt);
+			if(verb != currentVerb) {
+				if(currentVerb != '') {
+					this.icons.removeChild(currentGraphics);
+					Verbs[currentVerb].deactivate();
+				}
+				if(Verbs[verb].activate()) {
+					const graphics = iconHighlight(anim);
+					console.log(graphics);
+					console.log(anim);
+					this.icons.addChild(graphics);
+					currentVerb = verb;
+					currentGraphics = graphics;
+				} else {
+					currentVerb = '';
+				}
+			} else {
+				if(currentVerb != '') {
+					this.icons.removeChild(currentGraphics);
+					currentVerb = '';
+					Verbs[verb].deactivate();
+				}
+			}
+			console.log(verb);
+		};
+	};
+
+	this.verbDisplay = function (verb) {
+		if(!(verb in Verbs) || !Verbs[verb].available) { return; }
+		const anim = this.animations[verb];
+		anim.interactive = true;
+		this.icons.addChild(anim);
+		anim.play();
+		anim.x = this.width + 1;
+		this.width = anim.x + anim.width;
+		this.height = Math.max(this.height, anim.height);
+		console.log(verb + ', anim extents: ' + anim.width + ', ' + anim.height);
+		anim.on('pointertap', this.verbHit(verb, anim));
+	};
+
+	this.display = function (screen) {
+
+		screen.interactive = true;
+		screen
+			.on('pointertap', this.screenHit(screen));
+
+		this.icons.interactive = true;
+		verbList.forEach(verb => this.verbDisplay(verb));
+
+		document.querySelector('body').addEventListener('keydown', function (evt) {
+			// escape
+			//if(evt.keyCode == 27) { eventHandler.mode(); }
+			// left
+			if(evt.keyCode == 37) {
+				if('keyboard-left' in Verbs) { Verbs['keyboard-left'].activate(); }
+			}
+			// up
+			if(evt.keyCode == 38) {
+				if('keyboard-up' in Verbs) { Verbs['keyboard-up'].activate(); }
+			}
+			// right
+			if(evt.keyCode == 39) {
+				if('keyboard-right' in Verbs) { Verbs['keyboard-right'].activate(); }
+			}
+			// down
+			if(evt.keyCode == 40) {
+				if('keyboard-down' in Verbs) { Verbs['keyboard-down'].activate(); }
+			}
+		});
+
+	};
+}
 
 
 /* Movement related code */

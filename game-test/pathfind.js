@@ -6,8 +6,26 @@
 */
 function PriorityQueue() {
 	const list = [];
+	function findIndex(weight) {
+		if(list.length == 0) { return -1; }
+		let start = 0;
+		let end = list.length - 1;
+		let needle = 0;
+		while(start <= end) {
+			needle = Math.floor((start + end) / 2);
+			if (list[needle].weight == weight) {
+				return needle;
+			} else if (weight < list[needle].weight) {
+				end = needle - 1;
+			} else {
+				start = needle + 1;
+			}
+		}
+		return needle;
+	}
+
 	this.push = function (val, weight) {
-		const idx = list.findIndex(el => (el.weight >= weight))
+		const idx = findIndex(weight); //list.findIndex(el => (el.weight >= weight))
 		if(idx == -1) {
 			list.push({val: val, weight: weight});
 		} else {
@@ -41,10 +59,10 @@ function pathfind(objMap, start, roomMap, dest, maxCount) {
 
 	function neighbors(pt) {
 		const pts = [];
-		const l = { x: pt.x - 1, y: pt.y };
-		const t = { x: pt.x, y: pt.y - 1};
-		const r = { x: pt.x + 1, y: pt.y };
-		const b = { x: pt.x, y: pt.y + 1 };
+		const l = { x: pt.x - 2, y: pt.y };
+		const t = { x: pt.x, y: pt.y - 2 };
+		const r = { x: pt.x + 2, y: pt.y };
+		const b = { x: pt.x, y: pt.y + 2 };
 		if (!oob(l)) { pts.push(l); }
 		if (!oob(t)) { pts.push(t); }
 		if (!oob(r)) { pts.push(r); }
@@ -66,7 +84,7 @@ function pathfind(objMap, start, roomMap, dest, maxCount) {
 		cur = frontier.pop();
 		//console.log('cur: ' + cur.pt.x + ', ' + cur.pt.y);
 		//console.log('frontier size ' + frontier.length());
-		if(eq(cur.pt, dest)) { break; }
+		if(eq(cur.pt, dest) || (distance(cur.pt, dest) < 2)) { break; }
 		neighbors(cur.pt)
 			.forEach(pt => {
 				frontier.push({ pt: pt, cost: cur.cost + 1},  cur.cost + 1 + distance(pt, dest));
