@@ -41,7 +41,7 @@ function GameData() {
 
 
 
-function UIChrome(Verbs) {
+function UIChrome(Verbs, stage, screen) {
 	const verbList = [];
 
 	this.icons = new PIXI.Container();
@@ -49,6 +49,7 @@ function UIChrome(Verbs) {
 	this.attributes = {};
 	this.width = 0;
 	this.height = 0;
+	this.screen = screen;
 
 	let currentVerb = '';
 	let currentGraphics = {};
@@ -57,11 +58,11 @@ function UIChrome(Verbs) {
 		verbList.push(verb);
 	};
 
-	this.screenHit = function(screen) {
+	this.screenHit = function() {
 		return event => {
 			console.log('click');
 			console.log(event);
-			const p = event.data.getLocalPosition(screen);
+			const p = event.data.getLocalPosition(this.screen);
 			console.log(p);
 			const hitX = Math.floor(p.x);
 			const hitY = Math.floor(p.y);
@@ -127,11 +128,10 @@ function UIChrome(Verbs) {
 		anim.on('pointertap', this.verbHit(verb, anim));
 	};
 
-	this.display = function (screen) {
-
-		screen.interactive = true;
-		screen
-			.on('pointertap', this.screenHit(screen));
+	this.display = function () {
+		this.screen.interactive = true;
+		this.screen
+			.on('pointertap', this.screenHit());
 
 		this.icons.interactive = true;
 		verbList.forEach(verb => this.verbDisplay(verb));
@@ -157,6 +157,51 @@ function UIChrome(Verbs) {
 			}
 		});
 
+	};
+
+	this.dialog = function(message) {
+		const style = {
+			fontFamily: 'IBM VGA 8x16',
+			stroke : '#101010',
+			fill: '#101010',
+			fontSize: 24,
+			wordWrap : true,
+			wordWrapWidth : 280
+		};
+
+		const graphics = new PIXI.Graphics();
+		graphics.interactive = true;
+		graphics.beginFill(0xf0f0f0, 0.9);
+		graphics.lineStyle(1, 0x000000, 1);
+		graphics.drawRect(0, 0, 300, 280);
+
+		const ok = new PIXI.Graphics();
+		ok.beginFill(0xf0f0f0, 0.9);
+		ok.lineStyle(1, 0x000000, 1);
+		ok.drawRect(0, 0, 100, 30);
+		ok.interactive = true;
+		ok.on('pointertap', evt => {
+			stage.removeChild(graphics);
+		});
+		ok.x = 100;
+		ok.y = 240;
+		const okText = new PIXI.Text('Okay', {
+			fontFamily: 'IBM VGA 8x16',
+			stroke : '#101010',
+			fill: '#101010',
+			fontSize: 24 });
+		okText.x = Math.floor((100 - okText.width) / 2);
+		okText.y = 4
+		ok.addChild(okText);
+		graphics.addChild(ok);
+		graphics.x = Math.floor((this.screen.width - 300) / 2);
+		graphics.y = 20 + this.icons.height;
+		const text = new PIXI.Text(message, style);
+		text.x = 10;
+		text.y = 5;
+		graphics.addChild(text);
+		stage.addChild(graphics);
+		console.log(message);
 	};
 }
 

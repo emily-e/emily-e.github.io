@@ -36,7 +36,7 @@ const pixelMap = {
 };
 
 
-function VerbLook(actor, Verbs) {
+function VerbLook(actor, Verbs, uiChrome) {
 	Verb.call(this, 'look', actor, Verbs);
 
 	this.target = function (x,y) {
@@ -53,14 +53,14 @@ function VerbLook(actor, Verbs) {
 				Object.keys(collide(pixelMap, x - gameObj.x, y - gameObj.y, verbColors, state.maps.look))
 					.forEach(rgb => {
 						flag = true;
-						console.log(gameObj.getDescription());
+						uiChrome.dialog(gameObj.getDescription());
 					});
 			} else {
 				console.log('no look map');
 			}
 		});
 		if(!flag) {
-			console.log(room.getDescription());
+			uiChrome.dialog(room.getDescription());
 		}
 		return false;
 	};
@@ -83,7 +83,7 @@ function VerbWalk(actor, Verbs) {
 	};
 }
 
-function VerbTake(actor, Verbs) {
+function VerbTake(actor, Verbs, uiChrome) {
 	Verb.call(this, 'take', actor, Verbs);
 	this.target = function (x,y) {
 		console.log('take ' + x + ', ' + y);
@@ -110,18 +110,18 @@ function VerbTake(actor, Verbs) {
 							});
 					});
 			} else {
-				console.log('no take map');
+				uiChrome.dialog('You can\'t do that.');
 			}
 		});
 		return false;
 	};
 }
 
-function VerbOpen(actor, Verbs) {
+function VerbOpen(actor, Verbs, uiChrome) {
 	Verb.call(this, 'open', actor, Verbs);
 }
 
-function VerbInventory(actor, Verbs) {
+function VerbInventory(actor, Verbs, uiChrome) {
 	Verb.call(this, 'inventory', actor, Verbs);
 	this.activate = function () {
 		console.log('on');
@@ -209,13 +209,13 @@ function KeyboardDown(actor, Verbs) {
 	};
 }
 
-function makeVerbs(actor, Verbs) {
+function makeVerbs(actor, Verbs, uiChrome) {
 	if (arguments.length < 2) { Verbs = {}; }
-	new VerbLook(actor, Verbs);
+	new VerbLook(actor, Verbs, uiChrome);
 	//new VerbWalk(actor, Verbs);
-	new VerbTake(actor, Verbs);
+	new VerbTake(actor, Verbs, uiChrome);
 	new VerbOpen(actor, Verbs);
-	new VerbInventory(actor, Verbs);
+	new VerbInventory(actor, Verbs, uiChrome);
 	new VerbDefault(actor, Verbs);
 
 	new KeyboardLeft(actor, Verbs);
