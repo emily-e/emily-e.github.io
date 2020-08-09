@@ -47,19 +47,103 @@ function UIChrome(Verbs, stage, screen) {
 	let verbList = [];
 
 	const iconAttributes = {};
+	const iconAssets = {};
 
-	this.icons = new PIXI.Container();
-	this.animations = {};
-	this.attributes = {};
+	const icons = new PIXI.Container();
+	const specialActions = new PIXI.Container();
+	const actionList = [];
+	icons.interactive = true;
+	specialActions.interactive = true;
+
 	this.width = 0;
 	this.height = 0;
-	this.screen = screen;
 
 	let currentVerb = '';
 	let currentGraphics = {};
+	let currentAction = -1;
+
 
 	this.addVerb = function (verb) {
 		verbList.push(verb);
+	};
+
+	const drawIcons = () => {
+		this.width = 0;
+		this.height = 0;
+
+		icons.removeChildren();
+		verbList.forEach(verb => {
+			if(!(verb in iconAssets) || !(verb in Verbs) || (Verbs[verb].modes.indexOf(currentMode) < 0)) { return; }
+			const anim = iconAssets[verb];
+			icons.addChild(anim);
+			anim.x = this.width + 1;
+			this.width = anim.x + anim.width;
+			this.height = Math.max(this.height, anim.height);
+			console.log(verb + ', anim extents: ' + anim.width + ', ' + anim.height);
+		});
+
+		specialActions.removeChildren();
+		specialActions.x = this.width + 1;
+		let offset = 0;
+		actionList.forEach(action => {
+			specialActions.addChild(action.asset);
+			action.asset.x = offset + 1;
+			offset = offset + action.asset.width + 1;
+		});
+
+		this.width = this.width + offset;
+		this.height = Math.max(icons.height, specialActions.height);
+		screen.y = this.height + 1;
+	};
+
+	const actionHit = action => evt => {
+		console.log(evt);
+		console.log(action);
+		if(currentVerb != '') {
+			icons.removeChild(currentGraphics);
+			currentVerb = '';
+			Verbs[verb].deactivate();
+		}
+		if(currentAction >= 0) {
+			actionList[currentAction].deactivate();
+			specialActions.removeChild(currentGraphics);
+			if (actionList[currentAction] != action) {
+				currentAction = actionList.indexOf(action);
+				action.activate();
+				const graphics = iconHighlight(action.asset);
+				specialActions.addChild(graphics);
+				currentGraphics = graphics;
+			} else {
+				currentAction = -1;
+			}
+		} else {
+			currentAction = actionList.indexOf(action);
+			action.activate();
+			const graphics = iconHighlight(action.asset);
+			specialActions.addChild(graphics);
+			currentGraphics = graphics;
+		}
+	};
+
+	this.addAction = function(action) {
+		action.asset.removeAllListeners();
+		action.asset.interactive = true;
+		if('play' in action.asset) { action.asset.play(); }
+		action.asset.on('pointertap', actionHit(action));
+		actionList.push(action);
+		drawIcons();
+	};
+
+	this.removeAction = function(action) {
+		const idx = actionList.indexOf(action);
+		if(currentAction == idx) {
+			currentAction = -1;
+			action.deactivate();
+		}
+		if(idx >= 0) {
+			actionList.splice(idx, 1);
+		}
+		drawIcons();
 	};
 
 	this.pushVerbs = function(newMode) {
@@ -67,9 +151,7 @@ function UIChrome(Verbs, stage, screen) {
 		modeStack.push(currentMode);
 		currentMode = newMode;
 
-		this.width = 0;
-		this.icons.removeChildren();
-		verbList.forEach(verb => this.verbDisplay(verb, currentMode));
+		drawIcons();
 	};
 
 	this.popVerbs = function() {
@@ -77,24 +159,26 @@ function UIChrome(Verbs, stage, screen) {
 		if(modeStack.length > 0) {
 			currentMode = modeStack.pop();
 		}
-
-		this.width = 0;
-		this.icons.removeChildren();
-		verbList.forEach(verb => this.verbDisplay(verb, currentMode));
+		drawIcons();
 	};
 
 	this.screenHit = function() {
 		return event => {
 			console.log('click');
 			console.log(event);
-			const p = event.data.getLocalPosition(this.screen);
+			const p = event.data.getLocalPosition(screen);
 			console.log(p);
 			const hitX = Math.floor(p.x);
 			const hitY = Math.floor(p.y);
 			if (currentVerb != '') {
 				if(!Verbs[currentVerb].target(hitX, hitY)) {
 					currentVerb = '';
-					this.icons.removeChild(currentGraphics);
+					icons.removeChild(currentGraphics);
+				}
+			} else if (currentAction >= 0) {
+				if(!actionList[currentAction].target(hitX, hitY)) {
+					currentAction = -1;
+					specialActions.removeChild(currentGraphics);
 				}
 			} else {
 				Verbs[''].target(hitX, hitY);
@@ -106,7 +190,12 @@ function UIChrome(Verbs, stage, screen) {
 		if (currentVerb != '') {
 			if(!Verbs[currentVerb].send(obj)) {
 				currentVerb = '';
-				this.icons.removeChild(currentGraphics);
+				icons.removeChild(currentGraphics);
+			}
+		} else if (currentAction >= 0) {
+			if(!actionList[currentAction].send(obj)) {
+				currentAction = -1;
+				specialActions.removeChild(currentGraphics);
 			}
 		} else {
 			Verbs[''].send(obj);
@@ -125,16 +214,21 @@ function UIChrome(Verbs, stage, screen) {
 	this.verbHit = function (verb, anim) {
 		return evt => {
 			console.log(evt);
+			if(currentAction >= 0) {
+				actionList[currentAction].deactivate();
+				currentAction = -1;
+				specialActions.removeChild(currentGraphics);
+			}
 			if(verb != currentVerb) {
 				if(currentVerb != '') {
-					this.icons.removeChild(currentGraphics);
+					icons.removeChild(currentGraphics);
 					Verbs[currentVerb].deactivate();
 				}
 				if(Verbs[verb].activate()) {
 					const graphics = iconHighlight(anim);
 					console.log(graphics);
 					console.log(anim);
-					this.icons.addChild(graphics);
+					icons.addChild(graphics);
 					currentVerb = verb;
 					currentGraphics = graphics;
 				} else {
@@ -142,7 +236,7 @@ function UIChrome(Verbs, stage, screen) {
 				}
 			} else {
 				if(currentVerb != '') {
-					this.icons.removeChild(currentGraphics);
+					icons.removeChild(currentGraphics);
 					currentVerb = '';
 					Verbs[verb].deactivate();
 				}
@@ -152,32 +246,21 @@ function UIChrome(Verbs, stage, screen) {
 	};
 
 	this.addIconAsset = function(verb, asset, attribs) {
-		this.animations[verb] = asset;
+		iconAssets[verb] = asset;
 		iconAttributes[verb] = attribs;
+		asset.interactive = true;
 		asset.play();
 		asset.on('pointertap', this.verbHit(verb, asset));
 	};
 
-	// Should have an add animation function called by loadIcons rather than doing the event attachment here.
-	this.verbDisplay = function (verb, mode) {
-		if(!(verb in this.animations) || !(verb in Verbs) || (Verbs[verb].modes.indexOf(mode) < 0)) { return; }
-		const anim = this.animations[verb];
-		anim.interactive = true;
-		this.icons.addChild(anim);
-		anim.x = this.width + 1;
-		this.width = anim.x + anim.width;
-		this.height = Math.max(this.height, anim.height);
-		console.log(verb + ', anim extents: ' + anim.width + ', ' + anim.height);
-	};
-
 	this.display = function () {
-		this.icons.removeChildren();
-		this.screen.interactive = true;
-		this.screen
-			.on('pointertap', this.screenHit());
+		stage.addChild(icons);
+		stage.addChild(specialActions);
 
-		this.icons.interactive = true;
-		verbList.forEach(verb => this.verbDisplay(verb, currentMode));
+		screen.interactive = true;
+		screen.on('pointertap', this.screenHit());
+
+		drawIcons();
 
 		// Should only do this once!
 		document.querySelector('body').addEventListener('keydown', function (evt) {
@@ -206,15 +289,15 @@ function UIChrome(Verbs, stage, screen) {
 	this.createDialog = function() {
 		const container = new PIXI.Container();
 		container.x = 50;
-		container.y = this.screen.y + 10;
-		console.log(this.icons.height);
-		console.log('xy: ' + this.screen.width + ', ' + this.screen.height);
+		container.y = screen.y + 10;
+		console.log(icons.height);
+		console.log('xy: ' + screen.width + ', ' + screen.height);
 
 		const graphics = new PIXI.Graphics();
 		graphics.interactive = true;
 		graphics.beginFill(0xf0f0f0, 0.9);
 		graphics.lineStyle(1, 0x000000, 1);
-		graphics.drawRect(0, 0, Math.floor(this.screen.width - 100), Math.floor(this.screen.height - 20));
+		graphics.drawRect(0, 0, Math.floor(screen.width - 100), Math.floor(screen.height - 20));
 		container.addChild(graphics);
 		stage.addChild(container);
 		return container;
@@ -255,8 +338,8 @@ function UIChrome(Verbs, stage, screen) {
 		okText.y = 4
 		ok.addChild(okText);
 		graphics.addChild(ok);
-		graphics.x = Math.floor((this.screen.width - 300) / 2);
-		graphics.y = 20 + this.icons.height;
+		graphics.x = Math.floor((screen.width - 300) / 2);
+		graphics.y = 20 + icons.height;
 		const text = new PIXI.Text(message, style);
 		text.x = 10;
 		text.y = 5;
@@ -464,7 +547,6 @@ function loadIconsFromSheet(obj, iconsName, spritesheet) {
 			anim.animationSpeed = 0.167; 
 			obj.addIconAsset(name, anim, attributes[name]);
 		});
-	console.log(obj.animations);
 }
 
 

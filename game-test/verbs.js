@@ -299,6 +299,20 @@ function VerbUse(actor, Verbs, uiChrome) {
 	this.modes = ['inventory'];
 
 	this.send = function(obj) {
+		if(obj.obj.isUsable()) {
+			const action = {
+				asset: obj.obj.getIcon(),
+				activate: () => {},
+				deactivate: () => {},
+				target: (x,y) => {
+					console.log('use on x,y: ' + x + ', ' + y);
+					uiChrome.removeAction(action);
+					return false;
+				}
+			};
+			uiChrome.addAction(action);
+			obj.destroy();
+		}
 		return false;
 	};
 }
