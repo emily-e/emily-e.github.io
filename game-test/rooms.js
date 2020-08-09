@@ -167,3 +167,12 @@ function InventoryRoom(name) {
 		console.log(this.contains);
 	}
 }
+
+
+/*
+	This is a "non-interactive" room designed to play a cutscene animation.
+	I don't really have an idea for how to implement this yet, so for now it's a placeholder.
+*/
+function CutSceneRoom(name) {
+	Room.call(this, name);
+}

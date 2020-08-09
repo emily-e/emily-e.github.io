@@ -42,7 +42,11 @@ function GameData() {
 
 
 function UIChrome(Verbs, stage, screen) {
-	const verbList = [];
+	const modeStack = [];
+	let currentMode = 'default';
+	let verbList = [];
+
+	const iconAttributes = {};
 
 	this.icons = new PIXI.Container();
 	this.animations = {};
@@ -56,6 +60,27 @@ function UIChrome(Verbs, stage, screen) {
 
 	this.addVerb = function (verb) {
 		verbList.push(verb);
+	};
+
+	this.pushVerbs = function(newMode) {
+		currentVerb = '';
+		modeStack.push(currentMode);
+		currentMode = newMode;
+
+		this.width = 0;
+		this.icons.removeChildren();
+		verbList.forEach(verb => this.verbDisplay(verb, currentMode));
+	};
+
+	this.popVerbs = function() {
+		currentVerb = '';
+		if(modeStack.length > 0) {
+			currentMode = modeStack.pop();
+		}
+
+		this.width = 0;
+		this.icons.removeChildren();
+		verbList.forEach(verb => this.verbDisplay(verb, currentMode));
 	};
 
 	this.screenHit = function() {
@@ -75,6 +100,17 @@ function UIChrome(Verbs, stage, screen) {
 				Verbs[''].target(hitX, hitY);
 			}
 		};
+	};
+
+	this.objectHit = function (obj) {
+		if (currentVerb != '') {
+			if(!Verbs[currentVerb].send(obj)) {
+				currentVerb = '';
+				this.icons.removeChild(currentGraphics);
+			}
+		} else {
+			Verbs[''].send(obj);
+		}
 	};
 
 	const iconHighlight = function(anim) {
@@ -115,27 +151,35 @@ function UIChrome(Verbs, stage, screen) {
 		};
 	};
 
-	this.verbDisplay = function (verb) {
-		if(!(verb in Verbs) || !Verbs[verb].available) { return; }
+	this.addIconAsset = function(verb, asset, attribs) {
+		this.animations[verb] = asset;
+		iconAttributes[verb] = attribs;
+		asset.play();
+		asset.on('pointertap', this.verbHit(verb, asset));
+	};
+
+	// Should have an add animation function called by loadIcons rather than doing the event attachment here.
+	this.verbDisplay = function (verb, mode) {
+		if(!(verb in this.animations) || !(verb in Verbs) || (Verbs[verb].modes.indexOf(mode) < 0)) { return; }
 		const anim = this.animations[verb];
 		anim.interactive = true;
 		this.icons.addChild(anim);
-		anim.play();
 		anim.x = this.width + 1;
 		this.width = anim.x + anim.width;
 		this.height = Math.max(this.height, anim.height);
 		console.log(verb + ', anim extents: ' + anim.width + ', ' + anim.height);
-		anim.on('pointertap', this.verbHit(verb, anim));
 	};
 
 	this.display = function () {
+		this.icons.removeChildren();
 		this.screen.interactive = true;
 		this.screen
 			.on('pointertap', this.screenHit());
 
 		this.icons.interactive = true;
-		verbList.forEach(verb => this.verbDisplay(verb));
+		verbList.forEach(verb => this.verbDisplay(verb, currentMode));
 
+		// Should only do this once!
 		document.querySelector('body').addEventListener('keydown', function (evt) {
 			// escape
 			//if(evt.keyCode == 27) { eventHandler.mode(); }
@@ -157,6 +201,23 @@ function UIChrome(Verbs, stage, screen) {
 			}
 		});
 
+	};
+
+	this.createDialog = function() {
+		const container = new PIXI.Container();
+		container.x = 50;
+		container.y = this.screen.y + 10;
+		console.log(this.icons.height);
+		console.log('xy: ' + this.screen.width + ', ' + this.screen.height);
+
+		const graphics = new PIXI.Graphics();
+		graphics.interactive = true;
+		graphics.beginFill(0xf0f0f0, 0.9);
+		graphics.lineStyle(1, 0x000000, 1);
+		graphics.drawRect(0, 0, Math.floor(this.screen.width - 100), Math.floor(this.screen.height - 20));
+		container.addChild(graphics);
+		stage.addChild(container);
+		return container;
 	};
 
 	this.dialog = function(message) {
@@ -322,16 +383,6 @@ function getPixels(sprite) {
 	return ctx.getImageData(0, 0, sprite.width, sprite.height).data;
 }
 
-function collectAnimations(animations, obj) {
-	console.log(animations);
-	Object.keys(animations)
-		.forEach(name => {
-			console.log(animations[name]);
-			obj.animations[name] = new PIXI.AnimatedSprite(animations[name]);
-			obj.animations[name].animationSpeed = 0.167; 
-		});
-	console.log(obj.animations);
-}
 
 
 
@@ -405,6 +456,75 @@ function loadIconsFromSheet(obj, iconsName, spritesheet) {
 				attributes[info.tag] = info;
 			}
 		});
-	collectAnimations(animations, obj);
-	obj.iconAttributes = attributes;
+	console.log(animations);
+	Object.keys(animations)
+		.forEach(name => {
+			console.log(animations[name]);
+			const anim = new PIXI.AnimatedSprite(animations[name]);
+			anim.animationSpeed = 0.167; 
+			obj.addIconAsset(name, anim, attributes[name]);
+		});
+	console.log(obj.animations);
+}
+
+
+function drawUnknownIcon() {
+	const icon = new PIXI.Graphics();
+	icon.beginFill(0xf0f0f0, 0.9);
+	icon.lineStyle(1, 0x000000, 1);
+	icon.drawRect(0, 0, 29, 29);
+	const iconText = new PIXI.Text('?', {
+		fontFamily: 'IBM VGA 8x16',
+		stroke : '#101010',
+		fill: '#101010',
+		fontSize: 24 });
+	iconText.x = Math.floor((29 - iconText.width) / 2);
+	iconText.y = 2
+	icon.addChild(iconText);
+	return icon;
+}
+
+function drawUp(graphics) {
+	graphics.beginFill(0xf0f0f0, 0.9);
+	graphics.lineStyle(1, 0x000000, 1);
+	graphics.drawRect(0, 0, 30, 30);
+	graphics.beginFill(0x101010, 1);
+	graphics.startPoly();
+	graphics.moveTo(3,27);
+	graphics.lineTo(15,3);
+	graphics.lineTo(27,27);
+	graphics.lineTo(3,27);
+	graphics.finishPoly();
+}
+
+function drawDown(graphics) {
+	graphics.beginFill(0xf0f0f0, 0.9);
+	graphics.lineStyle(1, 0x000000, 1);
+	graphics.drawRect(0, 0, 30, 30);
+	graphics.beginFill(0x101010, 1);
+	graphics.startPoly();
+	graphics.moveTo(3,3);
+	graphics.lineTo(15,27);
+	graphics.lineTo(27,3);
+	graphics.lineTo(3,3);
+	graphics.finishPoly();
+}
+
+function drawX(graphics) {
+	graphics.beginFill(0xf0f0f0, 0.9);
+	graphics.lineStyle(1, 0x000000, 1);
+	graphics.drawRect(0, 0, 30, 30);
+	graphics.beginFill(0x000000, 1);
+	graphics.startPoly();
+	graphics.moveTo(3,5);
+	graphics.lineTo(5,3);
+	graphics.lineTo(27,25);
+	graphics.lineTo(25,27);
+	graphics.lineTo(3,5);
+	graphics.moveTo(25,3);
+	graphics.lineTo(27,5);
+	graphics.lineTo(5,27);
+	graphics.lineTo(3,25);
+	graphics.lineTo(25,3);
+	graphics.finishPoly();
 }

@@ -96,13 +96,19 @@ function GameObject(name) {
 	this.displayState = '';
 
 	this.getDescription = function() {
-		return ('longDescription' in this) ? this.longDescription : '';
-	}
+		return ('longDescription' in this) ? this.longDescription : this.displayName;
+	};
+	this.getDisplayName = function() {
+		return this.displayName;
+	};
+	this.getIcon = function() {
+		return ('icon' in this.states) ? this.states.icon : drawUnknownIcon();
+	};
 
 	this.isCarryable = function(status) {
 		if(arguments.length > 0) { this.carryable = status; }
 		return this.carryable;
-	}
+	};
 	this.as = function (description) {
 		this.longDescription = description;
 		return this;
@@ -295,7 +301,9 @@ Rooms.room0.currentState = 'day';
 new Room('room1')
 	.as('The foothills of a mountain with a large sinkhole nearby.')
 	.with({ west: 'room0' })
-	.having((new GameObject('key')).setXY(77, 247));
+	.having((new GameObject('key'))
+		.as('A large gold key')
+		.setXY(77, 247));
 
 
 
@@ -328,7 +336,6 @@ app.loader
 			app.stage.addChild(screen);
 
 			loadIconsFromSheet(uiChrome, 'icons', resources["icons.json"].spritesheet);
-			uiChrome.screen = screen;
 			uiChrome.display();
 			screen.y = uiChrome.height + 1;
 
