@@ -87,21 +87,27 @@ const uiChrome = new UIChrome(Verbs, app.stage, screen);
 const player = new Player('player');
 makeVerbs(player, Verbs, uiChrome);
 
+GameState.set('time-of-day', 'day');
+setInterval(() => {
+	GameState.set('time-of-day', (GameState.get('time-of-day') == 'day') ? 'night' : 'day');
+}, 10000);
+
 new Room('room0')
 	.as('A large field with a boulder, tree, and pond.')
-	.with({ east: 'room1' })
+	.with({ east: { dest: 'room1', x: 120, y: 395 } })
 	.having((new GameObject('chest'))
 		.as('A large treasure chest')
 		.setXY(590, 185)
 		.setState('closed'))
-	.having(player.setXY(110, 316));
-Rooms.room0.currentState = 'day';
+	.having(player.setXY(110, 316))
+	.addTrait(OutdoorRoom(GameState));
 new Room('room1')
 	.as('The foothills of a mountain with a large sinkhole nearby.')
-	.with({ west: 'room0' })
+	.with({ west: {dest: 'room0', x: 520, y: 280 } })
 	.having((new GameObject('key'))
 		.as('A large gold key')
 		.usable(true)
+		.addTrait(Key)
 		.setXY(77, 247));
 
 

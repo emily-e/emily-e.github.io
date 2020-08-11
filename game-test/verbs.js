@@ -39,32 +39,36 @@ const pixelMap = {
 	x: 0, y: 0, width: 1, height: 1
 };
 
+function findObjects(room, mapType, x,y, handler) {
+	let flag = false;
+	room.contains.forEach(gameObj => {
+		console.log(gameObj);
+		const state = gameObj.states[gameObj.currentState];
+		if(mapType in state.maps) {
+			console.log(mapType + ' map available');
+			Object.keys(collide(pixelMap, x - gameObj.x, y - gameObj.y, verbColors, state.maps[mapType]))
+				.forEach(rgb => {
+					flag = handler(gameObj);
+				});
+		} else {
+			console.log('no map');
+		}
+	});
+	return flag;
+}
 
 function VerbLook(actor, Verbs, uiChrome) {
 	Verb.call(this, 'look', actor, Verbs);
 
 	this.target = function (x,y) {
 		console.log('look ' + x + ', ' + y);
-		let flag = false;
-		const room = this.actor.currentRoom;
-		console.log(room);
-		room.contains.forEach(gameObj => {
-			if(flag) { return; }
-			console.log(gameObj);
-			const state = gameObj.states[gameObj.currentState];
-			if('look' in state.maps) {
-				console.log('look map available');
-				Object.keys(collide(pixelMap, x - gameObj.x, y - gameObj.y, verbColors, state.maps.look))
-					.forEach(rgb => {
-						flag = true;
-						uiChrome.dialog(gameObj.getDescription());
-					});
-			} else {
-				console.log('no look map');
-			}
-		});
+		let flag = findObjects(this.actor.currentRoom, 'look', x,y,
+			gameObj => {
+				uiChrome.dialog(gameObj.getDescription());
+				return true;
+			});
 		if(!flag) {
-			uiChrome.dialog(room.getDescription());
+			uiChrome.dialog(this.actor.currentRoom.getDescription());
 		}
 		return false;
 	};
@@ -92,29 +96,24 @@ function VerbTake(actor, Verbs, uiChrome) {
 	this.target = function (x,y) {
 		console.log('take ' + x + ', ' + y);
 		const room = this.actor.currentRoom;
-		let flag = false;
-		room.contains.forEach(gameObj => {
-			if(flag || gameObj == player) { return; }
-			console.log(gameObj);
-			const state = gameObj.states[gameObj.currentState];
-			if('take' in state.maps) {
-				console.log('take map available');
-				Object.keys(collide(pixelMap, x - gameObj.x, y - gameObj.y, verbColors, state.maps.take))
+		let flag = findObjects(this.actor.currentRoom, 'take', x,y,
+			gameObj => {
+				if(gameObj == player) { return false; }
+				const state = gameObj.states[gameObj.currentState];
+				let flag = false;
+				Object
+					.keys(collide(this.actor.states[this.actor.currentState].map,
+						this.actor.x + this.actor.dx - gameObj.x, this.actor.y + this.actor.dy - gameObj.y,
+						verbColors, state.maps.take))
 					.forEach(rgb => {
-						Object
-							.keys(collide(this.actor.states[this.actor.currentState].map,
-								this.actor.x + this.actor.dx - gameObj.x, this.actor.y + this.actor.dy - gameObj.y,
-								verbColors, state.maps.take))
-							.forEach(rgb => {
-								console.log('take overlap');
-								if(gameObj.isCarryable()) {
-									flag = true;
-									actor.inventory.moveTo(gameObj, player.currentRoom, 'take', player.inventory.name);
-								}
-							});
+						console.log('take overlap');
+						if(gameObj.isCarryable()) {
+							flag = true;
+							actor.inventory.moveTo(gameObj, player.currentRoom, 'take');
+						}
 					});
-			}
-		});
+				return flag;
+			});
 		if(!flag) { uiChrome.dialog('You can\'t do that.'); }
 		return false;
 	};
@@ -302,12 +301,13 @@ function VerbUse(actor, Verbs, uiChrome) {
 		if(obj.obj.isUsable()) {
 			const action = {
 				asset: obj.obj.getIcon(),
-				activate: () => {},
-				deactivate: () => {},
+				activate: () => obj.obj.use_activate(),
+				deactivate: () => obj.obj.use_deactivate(),
 				target: (x,y) => {
 					console.log('use on x,y: ' + x + ', ' + y);
-					uiChrome.removeAction(action);
-					return false;
+					const ret = obj.obj.use_target(x,y);
+					if(!ret) { uiChrome.removeAction(action); }
+					return ret;
 				}
 			};
 			uiChrome.addAction(action);
@@ -319,7 +319,6 @@ function VerbUse(actor, Verbs, uiChrome) {
 
 
 function makeVerbs(actor, Verbs, uiChrome) {
-	if (arguments.length < 2) { Verbs = {}; }
 	new VerbLook(actor, Verbs, uiChrome);
 	//new VerbWalk(actor, Verbs);
 	new VerbTake(actor, Verbs, uiChrome);

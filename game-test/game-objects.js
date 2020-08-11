@@ -11,7 +11,7 @@ function GameObject(name) {
 	this.nextState = '';
 	this.currentState = '';
 	this.states = {};
-	this.colorToMessage = ColorMessages;
+	this.colorToMessage = new ColorMessages();
 	this.x = 0;
 	this.y = 0;
 	this.dx = 0;
@@ -20,6 +20,10 @@ function GameObject(name) {
 	this.canUse = false;
 	this.displayName = name;
 	this.displayState = '';
+
+	this.addTrait = function(trait) {
+		return trait(this);
+	};
 
 	this.getDescription = function() {
 		return ('longDescription' in this) ? this.longDescription : this.displayName;
@@ -153,7 +157,7 @@ function Player(name) {
 		console.log(this.currentRoom.connections);
 		if('west' in this.currentRoom.connections) {
 			const newRoom = Rooms[this.currentRoom.connections.west];
-			newRoom.moveTo(this, this.currentRoom, 'west', this.currentRoom.connections.west);
+			newRoom.moveTo(this, this.currentRoom, 'west');
 		}
 		return true;
 	};
@@ -172,7 +176,7 @@ function Player(name) {
 		console.log(this.currentRoom.connections);
 		if('east' in this.currentRoom.connections) {
 			const newRoom = Rooms[this.currentRoom.connections.east];
-			newRoom.moveTo(this, this.currentRoom, 'east', this.currentRoom.connections.east);
+			newRoom.moveTo(this, this.currentRoom, 'east');
 		}
 		return true;
 	};
@@ -207,4 +211,32 @@ function Player(name) {
 			return 'walk';
 		}
 	};
+}
+
+
+
+/**********
+Traits
+**********/
+
+function Key(obj) {
+	obj.use_activate = function() {
+		console.log('key activate');
+	};
+	obj.use_deactivate = function() {
+		console.log('key deactivate');
+	};
+	obj.use_target = function(x,y) {
+		console.log('key target ' + x +', ' + y);
+		return false;
+	};
+	return obj;
+}
+
+function Stackable(obj) {
+	return obj;
+}
+
+function Lock(obj) {
+	return obj;
 }
