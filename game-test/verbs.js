@@ -57,6 +57,25 @@ function findObjects(room, mapType, x,y, handler) {
 	return flag;
 }
 
+function findObjectsWithOverlap(actor, mapType, x,y, handler) {
+	return findObjects(actor.currentRoom, mapType, x,y,
+		gameObj => {
+			if(gameObj == actor) { return false; }
+			const state = gameObj.states[gameObj.currentState];
+			let flag = false;
+			Object
+				.keys(collide(actor.states[actor.currentState].map,
+					actor.x + actor.dx - gameObj.x, actor.y + actor.dy - gameObj.y,
+					verbColors, state.maps[mapType]))
+				.forEach(rgb => {
+					console.log('overlap');
+					if(flag) { return; }
+					flag = handler(gameObj);
+				});
+			return flag;
+		});
+}
+
 function VerbLook(actor, Verbs, uiChrome) {
 	Verb.call(this, 'look', actor, Verbs);
 
@@ -95,24 +114,13 @@ function VerbTake(actor, Verbs, uiChrome) {
 	Verb.call(this, 'take', actor, Verbs);
 	this.target = function (x,y) {
 		console.log('take ' + x + ', ' + y);
-		const room = this.actor.currentRoom;
-		let flag = findObjects(this.actor.currentRoom, 'take', x,y,
+		let flag = findObjectsWithOverlap(actor, 'take', x,y,
 			gameObj => {
-				if(gameObj == player) { return false; }
-				const state = gameObj.states[gameObj.currentState];
-				let flag = false;
-				Object
-					.keys(collide(this.actor.states[this.actor.currentState].map,
-						this.actor.x + this.actor.dx - gameObj.x, this.actor.y + this.actor.dy - gameObj.y,
-						verbColors, state.maps.take))
-					.forEach(rgb => {
-						console.log('take overlap');
-						if(gameObj.isCarryable()) {
-							flag = true;
-							actor.inventory.moveTo(gameObj, player.currentRoom, 'take');
-						}
-					});
-				return flag;
+				if(gameObj.isCarryable()) {
+					actor.inventory.moveTo(gameObj, player.currentRoom, 'take');
+					return true;
+				}
+				return false;
 			});
 		if(!flag) { uiChrome.dialog('You can\'t do that.'); }
 		return false;
@@ -121,6 +129,18 @@ function VerbTake(actor, Verbs, uiChrome) {
 
 function VerbOpen(actor, Verbs, uiChrome) {
 	Verb.call(this, 'open', actor, Verbs);
+	this.target = function (x,y) {
+		findObjectsWithOverlap(actor, 'open', x,y,
+			gameObj => {
+				let flag = false;
+				console.log(gameObj);
+				if('open' in gameObj) {
+					flag = gameObj.open();
+				}
+				return flag;
+			});
+		return false;
+	};
 }
 
 
@@ -301,11 +321,11 @@ function VerbUse(actor, Verbs, uiChrome) {
 		if(obj.obj.isUsable()) {
 			const action = {
 				asset: obj.obj.getIcon(),
-				activate: () => obj.obj.use_activate(),
-				deactivate: () => obj.obj.use_deactivate(),
+				activate: () => obj.obj.use_activate(actor, uiChrome),
+				deactivate: () => obj.obj.use_deactivate(actor, uiChrome),
 				target: (x,y) => {
 					console.log('use on x,y: ' + x + ', ' + y);
-					const ret = obj.obj.use_target(x,y);
+					const ret = obj.obj.use_target(actor, uiChrome, x,y);
 					if(!ret) { uiChrome.removeAction(action); }
 					return ret;
 				}

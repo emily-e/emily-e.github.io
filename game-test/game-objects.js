@@ -220,23 +220,70 @@ Traits
 **********/
 
 function Key(obj) {
-	obj.use_activate = function() {
+	obj.unlocks = [];
+	obj.use_activate = function(actor, uiChrome) {
 		console.log('key activate');
 	};
-	obj.use_deactivate = function() {
+	obj.use_deactivate = function(actor, uiChrome) {
 		console.log('key deactivate');
 	};
-	obj.use_target = function(x,y) {
+	obj.use_target = function(actor, uiChrome, x,y) {
 		console.log('key target ' + x +', ' + y);
-		return false;
+		let flag = findObjectsWithOverlap(actor, 'use', x,y,
+			gameObj => {
+				let flag = false;
+				console.log(gameObj);
+				this.unlocks.forEach(lock => {
+					if(flag) { return; }
+					if(gameObj == GameObjects[lock.name]) {
+						flag = true;
+						gameObj.lock_unlock(obj);
+/*						if() {
+							uiChrome.dialog(lock.nothing);
+						} else {
+							uiChrome.dialog(lock.unlock);
+						}*/
+					}
+				});
+				return flag;
+			});
+		return !flag;
 	};
-	return obj;
-}
-
-function Stackable(obj) {
+	obj.key_unlocks = function(name, unlock, nothing) {
+		this.unlocks.push({ name: name, unlock: unlock, nothing: nothing});
+		return this;
+	};
 	return obj;
 }
 
 function Lock(obj) {
+	obj.locked = 'locked';
+	obj.lock_unlock = function(key) {
+		console.log(key);
+		console.log('unlock');
+		this.locked = (this.locked == 'locked') ? 'unlocked' : 'locked';
+		console.log(this.locked);
+		return this.locked;
+	};
+	return obj;
+}
+
+function Openable(obj) {
+	obj.setState('closed');
+	obj.open = function() {
+		if(obj.currentState == 'closed') {
+			if(('locked' in obj) && (obj.locked == 'locked')) {
+				return false;
+			}
+			obj.setState('open');
+		} else {
+			obj.setState('closed');
+		}
+			return true;
+	}
+	return obj;
+}
+
+function Stackable(obj) {
 	return obj;
 }
