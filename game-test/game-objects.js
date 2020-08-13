@@ -223,6 +223,7 @@ function Key(obj) {
 	obj.unlocks = [];
 	obj.use_activate = function(actor, uiChrome) {
 		console.log('key activate');
+		return true;
 	};
 	obj.use_deactivate = function(actor, uiChrome) {
 		console.log('key deactivate');
@@ -237,20 +238,29 @@ function Key(obj) {
 					if(flag) { return; }
 					if(gameObj == GameObjects[lock.name]) {
 						flag = true;
-						gameObj.lock_unlock(obj);
-/*						if() {
-							uiChrome.dialog(lock.nothing);
+						const status = gameObj.lock_status();
+						const newStatus = gameObj.lock_unlock(obj);
+						if(newStatus == 'locked') {
+							if(status == 'locked') {
+								uiChrome.dialog(lock.nothing);
+							} else {
+								uiChrome.dialog(lock.lock);
+							}
 						} else {
-							uiChrome.dialog(lock.unlock);
-						}*/
+							if(status == 'locked') {
+								uiChrome.dialog(lock.unlock);
+							} else {
+								uiChrome.dialog(lock.nothing);
+							}
+						}
 					}
 				});
 				return flag;
 			});
 		return !flag;
 	};
-	obj.key_unlocks = function(name, unlock, nothing) {
-		this.unlocks.push({ name: name, unlock: unlock, nothing: nothing});
+	obj.key_unlocks = function(lock) {
+		this.unlocks.push({ name: lock.name, unlock: lock.unlock, lock: lock.lock, nothing: lock.nothing });
 		return this;
 	};
 	return obj;
@@ -265,6 +275,7 @@ function Lock(obj) {
 		console.log(this.locked);
 		return this.locked;
 	};
+	obj.lock_status = function() { return this.locked; };
 	return obj;
 }
 
@@ -282,6 +293,33 @@ function Openable(obj) {
 			return true;
 	}
 	return obj;
+}
+
+function Container(name) {
+	return obj => {
+		obj.container = new ContainerRoom(name);
+		obj.look_inside = function (actor, uiChome) {
+			console.log('look inside');
+			const currentRoom = actor.currentRoom;
+			
+			const action = {
+				asset: uiChrome.getIconAsset('return'),
+				activate: () => {
+					// to do
+					actor.currentRoom = currentRoom;
+					obj.container.look_away(actor);
+					uiChrome.removeAction(action);
+					return false;
+				},
+				deactivate: () => {},
+				target: (x,y) => { return false; }
+			};
+			uiChrome.addAction(action);
+			obj.container.look_inside(actor);
+			actor.currentRoom = obj.container;
+		};
+		return obj;
+	};
 }
 
 function Stackable(obj) {

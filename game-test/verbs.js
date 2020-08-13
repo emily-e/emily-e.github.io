@@ -48,7 +48,7 @@ function findObjects(room, mapType, x,y, handler) {
 			console.log(mapType + ' map available');
 			Object.keys(collide(pixelMap, x - gameObj.x, y - gameObj.y, verbColors, state.maps[mapType]))
 				.forEach(rgb => {
-					flag = handler(gameObj);
+					flag = handler(gameObj, rgb);
 				});
 		} else {
 			console.log('no map');
@@ -59,7 +59,7 @@ function findObjects(room, mapType, x,y, handler) {
 
 function findObjectsWithOverlap(actor, mapType, x,y, handler) {
 	return findObjects(actor.currentRoom, mapType, x,y,
-		gameObj => {
+		(gameObj, rgb) => {
 			if(gameObj == actor) { return false; }
 			const state = gameObj.states[gameObj.currentState];
 			let flag = false;
@@ -67,10 +67,10 @@ function findObjectsWithOverlap(actor, mapType, x,y, handler) {
 				.keys(collide(actor.states[actor.currentState].map,
 					actor.x + actor.dx - gameObj.x, actor.y + actor.dy - gameObj.y,
 					verbColors, state.maps[mapType]))
-				.forEach(rgb => {
+				.forEach(rgb2 => {
 					console.log('overlap');
 					if(flag) { return; }
-					flag = handler(gameObj);
+					flag = handler(gameObj, rgb, rgb2);
 				});
 			return flag;
 		});
@@ -82,8 +82,12 @@ function VerbLook(actor, Verbs, uiChrome) {
 	this.target = function (x,y) {
 		console.log('look ' + x + ', ' + y);
 		let flag = findObjects(this.actor.currentRoom, 'look', x,y,
-			gameObj => {
-				uiChrome.dialog(gameObj.getDescription());
+			(gameObj, rgb) => {
+				if(('look_inside' in gameObj) && (rgb == 'ff00ff')) {
+					gameObj.look_inside(actor, uiChrome);
+				} else {
+					uiChrome.dialog(gameObj.getDescription());
+				}
 				return true;
 			});
 		if(!flag) {

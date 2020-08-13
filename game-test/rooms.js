@@ -184,13 +184,16 @@ function Room(name) {
 function ContainerRoom(name) {
 	Room.call(this, name);
 
-	this.priorRoom = [];
-
 	this.moveTo = function (obj, currentRoom, travelling) {
 		currentRoom.removeObject(obj);
-		this.priorRoom.push({ obj: obj, x: obj.x, y: obj.y, room: currentRoom });
 
-	}
+	};
+
+	this.look_away = function(actor) {
+	};
+
+	this.look_inside = function(actor) {
+	};
 }
 
 

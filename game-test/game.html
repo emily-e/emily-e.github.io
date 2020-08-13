@@ -99,7 +99,8 @@ new Room('room0')
 		.as('A large treasure chest')
 		.setXY(590, 185)
 		.addTrait(Lock)
-		.addTrait(Openable))
+		.addTrait(Openable)
+		.addTrait(Container('chest-inside')))
 	.having(player.setXY(110, 316))
 	.addTrait(OutdoorRoom(GameState));
 new Room('room1')
@@ -109,7 +110,7 @@ new Room('room1')
 		.as('A large gold key')
 		.usable(true)
 		.addTrait(Key)
-		.key_unlocks('chest', 'With a click, the chest unlocks', 'Nothing happens')
+		.key_unlocks({name: 'chest', unlock: 'With a click, the chest unlocks', lock: 'The lock clicks, sealing the chest', nothing: 'Nothing happens'})
 		.setXY(77, 247));
 
 
@@ -128,6 +129,7 @@ app.loader
 	.add("room0.json")
 	.add("room1.json")
 	.add("chest.json")
+	.add("chest-inside.json")
 	.add("key.json")
 	.add("icons.json")
 	.load(

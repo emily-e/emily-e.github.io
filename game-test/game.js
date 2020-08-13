@@ -108,20 +108,23 @@ function UIChrome(Verbs, stage, screen) {
 			actionList[currentAction].deactivate();
 			specialActions.removeChild(currentGraphics);
 			if (actionList[currentAction] != action) {
-				currentAction = actionList.indexOf(action);
-				action.activate();
-				const graphics = iconHighlight(action.asset);
-				specialActions.addChild(graphics);
-				currentGraphics = graphics;
+				currentAction = -1;
+				if(action.activate()) {
+					currentAction = actionList.indexOf(action);
+					const graphics = iconHighlight(action.asset);
+					specialActions.addChild(graphics);
+					currentGraphics = graphics;
+				}
 			} else {
 				currentAction = -1;
 			}
 		} else {
-			currentAction = actionList.indexOf(action);
-			action.activate();
-			const graphics = iconHighlight(action.asset);
-			specialActions.addChild(graphics);
-			currentGraphics = graphics;
+			if(action.activate()) {
+				currentAction = actionList.indexOf(action);
+				const graphics = iconHighlight(action.asset);
+				specialActions.addChild(graphics);
+				currentGraphics = graphics;
+			}
 		}
 	};
 
@@ -137,6 +140,7 @@ function UIChrome(Verbs, stage, screen) {
 	this.removeAction = function(action) {
 		const idx = actionList.indexOf(action);
 		if(currentAction == idx) {
+			specialActions.removeChild(currentGraphics);
 			currentAction = -1;
 			action.deactivate();
 		}
@@ -223,6 +227,7 @@ function UIChrome(Verbs, stage, screen) {
 				if(currentVerb != '') {
 					icons.removeChild(currentGraphics);
 					Verbs[currentVerb].deactivate();
+					currentVerb = '';
 				}
 				if(Verbs[verb].activate()) {
 					const graphics = iconHighlight(anim);
@@ -231,8 +236,6 @@ function UIChrome(Verbs, stage, screen) {
 					icons.addChild(graphics);
 					currentVerb = verb;
 					currentGraphics = graphics;
-				} else {
-					currentVerb = '';
 				}
 			} else {
 				if(currentVerb != '') {
@@ -244,6 +247,8 @@ function UIChrome(Verbs, stage, screen) {
 			console.log(verb);
 		};
 	};
+
+	this.getIconAsset = function(verb) { return iconAssets[verb]; };
 
 	this.addIconAsset = function(verb, asset, attribs) {
 		iconAssets[verb] = asset;

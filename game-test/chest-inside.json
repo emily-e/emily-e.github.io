@@ -1,0 +1,27 @@
+{ "frames": {
+   "chest-inside (tag:,frame:0,z:0)": {
+    "frame": { "x": 0, "y": 0, "w": 400, "h": 225 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 400, "h": 225 },
+    "sourceSize": { "w": 400, "h": 225 },
+    "duration": 100
+   },
+   "chest-inside (tag:,frame:0,map:default)": {
+    "frame": { "x": 0, "y": 225, "w": 400, "h": 225 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 400, "h": 225 },
+    "sourceSize": { "w": 400, "h": 225 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "http://www.aseprite.org/",
+  "version": "1.2.21-x64",
+  "image": "chest-inside.png",
+  "format": "RGBA8888",
+  "size": { "w": 400, "h": 450 },
+  "scale": "1"
+ }
+}
