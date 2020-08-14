@@ -40,17 +40,17 @@ function ColorMessages() {
 
 	this[Directions.WEST] = function(p) {
 		console.log('GO WEST');
-		return p.goWest(this);
+		return p.go(this, 'west');
 	};
 	this[Directions.NORTH] = function(p) {
-		return p.goNorth(this);
+		return p.go(this, 'north');
 	};
 	this[Directions.EAST] = function(p) {
 		console.log('GO EAST');
-		return p.goEast(this);
+		return p.go(this, 'east');
 	};
 	this[Directions.SOUTH] = function(p) {
-		return p.goSouth(this);
+		return p.go(this, 'south');
 	};
 }
 
@@ -122,25 +122,11 @@ function Room(name) {
 		console.log(roomMap);
 		const xCenter = Math.floor(objMap.width * objMap.x);
 		const yCenter = Math.floor(objMap.height * objMap.y);
-		if(travelling in this.landing) {
-			obj.x = this.landing[travelling].x;
-			obj.y = this.landing[travelling].y;
+		if(travelling in currentRoom.landing) {
+			obj.x = currentRoom.landing[travelling].x;
+			obj.y = currentRoom.landing[travelling].y;
 		} else {
-			switch (travelling) {
-				case 'east':
-					obj.x = (objMap.width - xCenter) + 2;
-					obj.y = (roomMap.height  - 6) - (objMap.height - yCenter);
-					break;
-				case 'west':
-					obj.x = (roomMap.width - 2) - (objMap.width - xCenter);
-					obj.y = (roomMap.height  - 6) - (objMap.height - yCenter);
-					break;
-				case 'north':
-					break;
-				case 'south':
-					break;
-				default:
-			}
+			console.log('to do');
 		}
 		console.log(obj);
 		console.log('new x y ' + obj.x + ', ' + obj.y);
@@ -190,9 +176,11 @@ function ContainerRoom(name) {
 	};
 
 	this.look_away = function(actor) {
+		actor.hold_end();
 	};
 
 	this.look_inside = function(actor) {
+		actor.hold_position();
 	};
 }
 

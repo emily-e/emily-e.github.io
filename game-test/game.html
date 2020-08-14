@@ -94,7 +94,10 @@ setInterval(() => {
 
 new Room('room0')
 	.as('A large field with a boulder, tree, and pond.')
-	.with({ east: { dest: 'room1', x: 120, y: 395 } })
+	.with({
+		east: { dest: 'room1', x: 120, y: 395 },
+		south: { dest: 'room2', x: 450, y: 230 } 
+	})
 	.having((new GameObject('chest'))
 		.as('A large treasure chest')
 		.setXY(590, 185)
@@ -112,6 +115,12 @@ new Room('room1')
 		.addTrait(Key)
 		.key_unlocks({name: 'chest', unlock: 'With a click, the chest unlocks', lock: 'The lock clicks, sealing the chest', nothing: 'Nothing happens'})
 		.setXY(77, 247));
+new Room('room2')
+	.as('A plateau stretches to the south and west, to the edge of a cliff in the east.')
+	.with({ north: { dest: 'room0', x: 320, y: 395 } })
+	.having(new GameObject('gem')
+		.as('A large ruby gem')
+		.setXY(582, 342));
 
 
 
@@ -128,8 +137,10 @@ app.loader
 	.add("player.json")
 	.add("room0.json")
 	.add("room1.json")
+	.add("room2.json")
 	.add("chest.json")
 	.add("chest-inside.json")
+	.add("gem.json")
 	.add("key.json")
 	.add("icons.json")
 	.load(

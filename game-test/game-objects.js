@@ -120,21 +120,35 @@ function Player(name) {
 	GameObject.call(this, name);
 	this.inventory = new InventoryRoom(name + '.inventory');
 	this.path = [];
+	const hold = false;
 
 	this.turn = function() {
-		this.x += this.dx;
-		this.y += this.dy;
-		if(this.path.length > 1) {
-			const pt = this.path.shift();
-			this.dx = pt.x - this.x;
-			this.dy = pt.y - this.y;
-		} else if(this.path.length == 1) {
+		if(hold) {
 			this.path = [];
 			this.dx = 0;
 			this.dy = 0;
+		} else {
+			this.x += this.dx;
+			this.y += this.dy;
+			const map = this.currentRoom.states[this.currentRoom.currentState].map;
+			if(this.x < 0) { this.x = 0; }
+			if(this.x >= map.width) { this.x = map.width - 1; }
+			if(this.y < 0) { this.y = 0; }
+			if(this.y >= map.height) { this.y = map.height - 1; }
+			if(this.path.length > 1) {
+				const pt = this.path.shift();
+				this.dx = pt.x - this.x;
+				this.dy = pt.y - this.y;
+			} else if(this.path.length == 1) {
+				this.path = [];
+				this.dx = 0;
+				this.dy = 0;
+			}
 		}
 	};
 
+	this.hold_end = function() { hold = false; }
+	this.hold_position = function() { hold = true; }
 	this.isCarryable = function(status) { return false; }
 	this.stop = function (sender) {
 		console.log(this);
@@ -149,42 +163,16 @@ function Player(name) {
 	this.swim = function (sender) {
 		return false;
 	};
-	this.goWest = function (sender) {
-		console.log('west!');
+	this.go = function (sender, direction) {
+		console.log(direction);
 		this.path = [];
 		this.dx = 0;
 		this.dy = 0;
 		console.log(this.currentRoom.connections);
-		if('west' in this.currentRoom.connections) {
-			const newRoom = Rooms[this.currentRoom.connections.west];
-			newRoom.moveTo(this, this.currentRoom, 'west');
+		if(direction in this.currentRoom.connections) {
+			const newRoom = Rooms[this.currentRoom.connections[direction]];
+			newRoom.moveTo(this, this.currentRoom, direction);
 		}
-		return true;
-	};
-	this.goNorth = function (sender) {
-		console.log('north!');
-		this.path = [];
-		this.dx = 0;
-		this.dy = 0;
-		return true;
-	};
-	this.goEast =function (sender) {
-		console.log('east!');
-		this.path = [];
-		this.dx = 0;
-		this.dy = 0;
-		console.log(this.currentRoom.connections);
-		if('east' in this.currentRoom.connections) {
-			const newRoom = Rooms[this.currentRoom.connections.east];
-			newRoom.moveTo(this, this.currentRoom, 'east');
-		}
-		return true;
-	};
-	this.goSouth = function (sender) {
-		console.log('south!');
-		this.path = [];
-		this.dx = 0;
-		this.dy = 0;
 		return true;
 	};
 
