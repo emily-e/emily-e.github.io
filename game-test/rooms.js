@@ -194,6 +194,8 @@ function InventoryRoom(name) {
 		console.log(currentRoom);
 		currentRoom.removeObject(obj);
 		this.contains.push(obj);
+		obj.x = 0;
+		obj.y = 0;
 		obj.setLocation(this);
 		console.log(this.contains);
 	}

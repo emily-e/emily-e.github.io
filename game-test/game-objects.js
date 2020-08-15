@@ -43,6 +43,8 @@ function GameObject(name) {
 		return this.canUse;
 	};
 
+	this.use = function(uiChrome, actor) { };
+
 	this.usable = function(status) {
 		this.canUse = status;
 		return this;
@@ -120,7 +122,7 @@ function Player(name) {
 	GameObject.call(this, name);
 	this.inventory = new InventoryRoom(name + '.inventory');
 	this.path = [];
-	const hold = false;
+	let hold = false;
 
 	this.turn = function() {
 		if(hold) {
@@ -218,7 +220,7 @@ function Key(obj) {
 	};
 	obj.use_target = function(actor, uiChrome, x,y) {
 		console.log('key target ' + x +', ' + y);
-		let flag = findObjectsWithOverlap(actor, 'use', x,y,
+		findObjectsWithOverlap(actor, 'use', x,y,
 			gameObj => {
 				let flag = false;
 				console.log(gameObj);
@@ -228,6 +230,7 @@ function Key(obj) {
 						flag = true;
 						const status = gameObj.lock_status();
 						const newStatus = gameObj.lock_unlock(obj);
+						this.use(uiChrome, actor, obj);
 						if(newStatus == 'locked') {
 							if(status == 'locked') {
 								uiChrome.dialog(lock.nothing);
@@ -245,7 +248,7 @@ function Key(obj) {
 				});
 				return flag;
 			});
-		return !flag;
+		return false;
 	};
 	obj.key_unlocks = function(lock) {
 		this.unlocks.push({ name: lock.name, unlock: lock.unlock, lock: lock.lock, nothing: lock.nothing });
@@ -311,5 +314,46 @@ function Container(name) {
 }
 
 function Stackable(obj) {
+	obj.stack_count = 0;
+
+	obj.getDisplayName = function() {
+		return this.displayName + ' (' + this.stack_count + ')';
+	};
+
+	obj.setLocation = function (room) {
+		const zero = [];
+		console.log('Moving to Location');
+		console.log(obj);
+		console.log('this');
+		console.log(this);
+		room.contains.forEach((gameObj, idx) => {
+			console.log(gameObj);
+			console.log(idx);
+			if(	(gameObj != this) &&
+					(gameObj.name == obj.name) &&
+					(gameObj.x == this.x) &&
+					(gameObj.y == this.y)) {
+				
+				gameObj.stack_count += this.stack_count;
+				this.stack_count = 0;
+			}
+			if(gameObj.stack_count == 0) {
+				zero.push(idx);
+			}
+		});
+		console.log(zero);
+		while(zero.length > 0) {
+			room.contains.splice(zero.pop(), 1);
+		}
+		this.currentRoom = room;
+	};
+
+	obj.create_instance = function(count) {
+		if(arguments.length < 1) { count = 1; }
+		const childObject = Object.assign({}, obj);
+		Object.setPrototypeOf(childObject, obj)
+		childObject.stack_count = count;
+		return childObject;
+	}
 	return obj;
 }

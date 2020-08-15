@@ -92,6 +92,11 @@ setInterval(() => {
 	GameState.set('time-of-day', (GameState.get('time-of-day') == 'day') ? 'night' : 'day');
 }, 10000);
 
+const potion = new GameObject('potion')
+	.as('A blue magical potion in a glass flask')
+	.aka('Blue Potion')
+	.addTrait(Stackable);
+
 new Room('room0')
 	.as('A large field with a boulder, tree, and pond.')
 	.with({
@@ -114,13 +119,19 @@ new Room('room1')
 		.usable(true)
 		.addTrait(Key)
 		.key_unlocks({name: 'chest', unlock: 'With a click, the chest unlocks', lock: 'The lock clicks, sealing the chest', nothing: 'Nothing happens'})
-		.setXY(77, 247));
+		.setXY(77, 247))
+	.having(potion
+		.create_instance(2)
+		.setXY(77, 300));
 new Room('room2')
 	.as('A plateau stretches to the south and west, to the edge of a cliff in the east.')
 	.with({ north: { dest: 'room0', x: 320, y: 395 } })
 	.having(new GameObject('gem')
 		.as('A large ruby gem')
-		.setXY(582, 342));
+		.setXY(562, 330))
+	.having(potion
+		.create_instance(3)
+		.setXY(100, 450));
 
 
 
@@ -142,6 +153,7 @@ app.loader
 	.add("chest-inside.json")
 	.add("gem.json")
 	.add("key.json")
+	.add("potion.json")
 	.add("icons.json")
 	.load(
 		(loader, resources) => {
